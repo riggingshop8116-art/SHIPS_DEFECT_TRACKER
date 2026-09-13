@@ -1,0 +1,6 @@
+{
+  "name": "Bangladesh Navy Dockyard - Ship Defect Tracker",
+  "description": "Official warship defect tracking and fleet maintenance management system for Bangladesh Navy Dockyard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
