@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Ship, 
   Wrench, 
@@ -598,6 +598,31 @@ export default function App() {
     window.location.reload();
   };
 
+  // Active user workshop details (in English)
+  const activeWorkshopName = authSession?.workshopNameEn || authSession?.workshopNameBn || 'Naval Dockyard Headquarters';
+  const activeWorkshopCode = authSession?.workshopCode || 'HQ';
+  const isAdmin = authSession?.role === 'admin';
+
+  // Calculate pending defects count (isolated to workshop user's shop if logged in as workshop user)
+  // MUST be called unconditionally at top-level before any early return to comply with React Rules of Hooks
+  const pendingJobsCount = useMemo(() => {
+    if (authSession?.role === 'workshop_user' && authSession.workshopCode && authSession.workshopCode !== 'HQ' && authSession.workshopCode !== 'HQ-ADMIN') {
+      const wsCode = authSession.workshopCode.toUpperCase();
+      const wsNameEn = (authSession.workshopNameEn || '').toLowerCase();
+      const wsNameBn = authSession.workshopNameBn || '';
+      return defects.filter(d => {
+        if (d.status === 'Solved') return false;
+        return (d.workshopCode && d.workshopCode.toUpperCase() === wsCode) ||
+               (d.workshop && (
+                 d.workshop.toUpperCase().includes(wsCode) ||
+                 (wsNameEn && d.workshop.toLowerCase().includes(wsNameEn)) ||
+                 (wsNameBn && d.workshop.includes(wsNameBn))
+               ));
+      }).length;
+    }
+    return defects.filter(d => d.status !== 'Solved').length;
+  }, [defects, authSession]);
+
   // Active Tab Title Translation for Header
   const getTabTitle = () => {
     if (isAdmin) {
@@ -650,15 +675,11 @@ export default function App() {
       <Login 
         workshops={workshops} 
         dockyardConfig={dockyardConfig} 
+        profile={profile}
         onLoginSuccess={handleLoginSuccess} 
       />
     );
   }
-
-  // Active user workshop details (in English)
-  const activeWorkshopName = authSession.workshopNameEn || authSession.workshopNameBn || 'Naval Dockyard Headquarters';
-  const activeWorkshopCode = authSession.workshopCode || 'HQ';
-  const isAdmin = authSession.role === 'admin';
 
   return (
     <div id="app-root-container" className="flex h-screen w-screen overflow-hidden bg-[#FCF4E2] text-slate-800 font-sans">
@@ -674,7 +695,7 @@ export default function App() {
         dockyardConfig={dockyardConfig}
         workshopsCount={workshops.length}
         shipsCount={ships.length}
-        pendingCount={defects.filter(d => d.status !== 'Solved').length}
+        pendingCount={pendingJobsCount}
         onLogout={handleRequestLogout}
         onOpenProfileModal={() => setShowProfileModal(true)}
         isMobileOpen={isMobileNavOpen}
@@ -708,10 +729,10 @@ export default function App() {
 
         {/* Navy Header Panel - Admin & User Header */}
         {authSession.role === 'admin' ? (
-          /* Admin Header - Fully Responsive */
+          /* Admin Header - Centered & Fully Responsive */
           <header id="main-navy-header" className="min-h-16 sm:min-h-20 py-2 sm:py-3 bg-[#001738] text-white px-2.5 sm:px-6 md:px-8 flex items-center justify-between shadow-2xl shrink-0 z-10 border-b-2 border-amber-500 select-none">
-            {/* Left: Mobile Menu Button + BANGLADESH NAVY */}
-            <div className="flex-1 flex items-center justify-start min-w-0">
+            {/* Left: Mobile Menu Button */}
+            <div className="shrink-0 flex items-center">
               <button
                 type="button"
                 onClick={() => setIsMobileNavOpen(true)}
@@ -721,45 +742,44 @@ export default function App() {
               >
                 <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
-
-              <span className="text-xs sm:text-xl md:text-2xl lg:text-3xl font-black text-amber-400 font-algerian tracking-wider uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] whitespace-nowrap truncate">
-                BANGLADESH NAVY
-              </span>
             </div>
 
-            {/* Center: Circular Naval Crest Logo */}
-            <div className="flex items-center justify-center shrink-0 px-2 sm:px-6">
-              <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-18 md:h-18 rounded-full p-0.5 sm:p-1 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-600 border-2 border-amber-300 shadow-xl flex items-center justify-center shrink-0 overflow-hidden bg-white">
-                <img 
-                  src="/anchor.jpg" 
-                  alt="Bangladesh Navy Crest" 
-                  className="w-full h-full object-cover rounded-full" 
-                />
-              </div>
-            </div>
-
-            {/* Right: BN DOCKYARD / Admin Portal */}
-            <div className="flex-1 min-w-0 flex items-center justify-start pl-1.5 sm:pl-4">
-              <div className="flex items-center gap-2 sm:gap-2.5">
-                <h1 
-                  id="header-admin-portal-title"
-                  className="text-xs sm:text-xl md:text-2xl lg:text-3xl font-black text-amber-300 font-algerian tracking-wider uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] whitespace-nowrap truncate"
-                  title="BN DOCKYARD • ADMIN PORTAL"
-                >
-                  BN DOCKYARD
-                </h1>
-                <span className="hidden md:inline-block px-2.5 py-1 bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-algerian font-bold rounded-lg tracking-wider">
-                  ADMIN PORTAL
+            {/* Center: BANGLADESH NAVY + Circular Naval Crest Logo + BN DOCKYARD ADMIN PORTAL - Centered */}
+            <div className="flex-1 flex items-center justify-center min-w-0 px-1 sm:px-4 text-center">
+              <div className="flex items-center justify-center gap-2 sm:gap-4 md:gap-6 min-w-0 text-center">
+                <span className="text-[11px] xs:text-xs sm:text-base md:text-xl lg:text-2xl font-black text-amber-400 font-algerian tracking-wider uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] whitespace-nowrap">
+                  BANGLADESH NAVY
                 </span>
+
+                <div className="w-9 h-9 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full p-0.5 sm:p-1 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-600 border-2 border-amber-300 shadow-xl flex items-center justify-center shrink-0 overflow-hidden bg-white">
+                  <img 
+                    src="/anchor.jpg" 
+                    alt="Bangladesh Navy Crest" 
+                    className="w-full h-full object-cover rounded-full" 
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 text-center">
+                  <h1 
+                    id="header-admin-portal-title"
+                    className="text-[11px] xs:text-xs sm:text-base md:text-xl lg:text-2xl font-black text-amber-300 font-algerian tracking-wider uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] whitespace-nowrap"
+                    title="BN DOCKYARD • ADMIN PORTAL"
+                  >
+                    BN DOCKYARD
+                  </h1>
+                  <span className="hidden sm:inline-block px-2 py-0.5 bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px] sm:text-xs font-algerian font-bold rounded-lg tracking-wider whitespace-nowrap">
+                    ADMIN PORTAL
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Far Right: Logout Button with Icon & Text */}
+            {/* Right: Logout Button with Icon & Text */}
             <div className="shrink-0 flex items-center pl-1.5 sm:pl-4">
               <button
                 onClick={handleRequestLogout}
                 id="header-logout-btn"
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-rose-600/20 hover:bg-rose-600/35 border-2 border-rose-500/50 hover:border-rose-400 text-rose-300 hover:text-white rounded-xl font-algerian text-xs sm:text-sm font-bold tracking-wider transition-all shadow-md active:scale-95 cursor-pointer shrink-0"
+                className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-rose-600/20 hover:bg-rose-600/35 border-2 border-rose-500/50 hover:border-rose-400 text-rose-300 hover:text-white rounded-xl font-algerian text-xs sm:text-sm font-bold tracking-wider transition-all shadow-md active:scale-95 cursor-pointer shrink-0"
                 title="Logout"
               >
                 <LogOut className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-rose-400 shrink-0" />
@@ -768,27 +788,29 @@ export default function App() {
             </div>
           </header>
         ) : (
-          /* User / Workshop Header - Fully Responsive */
+          /* User / Workshop Header - Centered & Fully Responsive */
           <header id="main-navy-header" className="min-h-16 sm:min-h-20 py-2 sm:py-3 bg-[#001738] text-white px-2.5 sm:px-6 md:px-8 flex items-center justify-between shadow-2xl shrink-0 z-10 border-b-2 border-amber-500 select-none">
-            {/* Mobile Menu Button */}
-            <button
-              type="button"
-              onClick={() => setIsMobileNavOpen(true)}
-              className="lg:hidden p-1.5 sm:p-2 text-amber-300 hover:text-white bg-amber-500/15 hover:bg-amber-500/30 border border-amber-400/40 rounded-xl mr-2 sm:mr-3 cursor-pointer shrink-0 transition-all active:scale-95"
-              title="Open Navigation Menu"
-              aria-label="Open Navigation Menu"
-            >
-              <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
-            </button>
+            {/* Left: Mobile Menu Button */}
+            <div className="shrink-0 flex items-center">
+              <button
+                type="button"
+                onClick={() => setIsMobileNavOpen(true)}
+                className="lg:hidden p-1.5 sm:p-2 text-amber-300 hover:text-white bg-amber-500/15 hover:bg-amber-500/30 border border-amber-400/40 rounded-xl mr-1.5 sm:mr-3 cursor-pointer shrink-0 transition-all active:scale-95"
+                title="Open Navigation Menu"
+                aria-label="Open Navigation Menu"
+              >
+                <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
+              </button>
+            </div>
 
-            {/* Center Aligned Content: BN DOCKYARD + Logo + Shop Name */}
-            <div className="flex-1 flex items-center justify-center min-w-0 px-1 sm:px-4">
-              <div className="flex items-center justify-center gap-2 sm:gap-4 md:gap-5 min-w-0">
-                <span className="text-xs sm:text-xl md:text-2xl lg:text-3xl font-black text-amber-400 font-algerian tracking-wider uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] whitespace-nowrap">
+            {/* Center Aligned Content: BN DOCKYARD + Logo + Shop Name - Perfectly Centered */}
+            <div className="flex-1 flex items-center justify-center min-w-0 px-1 sm:px-4 text-center">
+              <div className="flex items-center justify-center gap-2 sm:gap-4 md:gap-5 min-w-0 text-center">
+                <span className="text-[11px] xs:text-xs sm:text-base md:text-xl lg:text-2xl font-black text-amber-400 font-algerian tracking-wider uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] whitespace-nowrap">
                   BN DOCKYARD
                 </span>
 
-                <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full p-0.5 sm:p-1 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-600 border-2 border-amber-300 shadow-xl flex items-center justify-center shrink-0 overflow-hidden bg-white">
+                <div className="w-9 h-9 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full p-0.5 sm:p-1 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-600 border-2 border-amber-300 shadow-xl flex items-center justify-center shrink-0 overflow-hidden bg-white">
                   <img 
                     src="/anchor.jpg" 
                     alt="Bangladesh Navy Crest" 
@@ -797,7 +819,7 @@ export default function App() {
                 </div>
 
                 <h1 
-                  className="text-xs sm:text-lg md:text-2xl lg:text-3xl font-black text-amber-300 font-algerian tracking-wider uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] truncate whitespace-nowrap"
+                  className="text-[11px] xs:text-xs sm:text-base md:text-xl lg:text-2xl font-black text-amber-300 font-algerian tracking-wider uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] leading-tight text-center"
                   title={activeWorkshopName}
                 >
                   {activeWorkshopName}
@@ -810,7 +832,7 @@ export default function App() {
               <button
                 onClick={handleRequestLogout}
                 id="header-logout-btn"
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-rose-600/20 hover:bg-rose-600/35 border-2 border-rose-500/50 hover:border-rose-400 text-rose-300 hover:text-white rounded-xl font-algerian text-xs sm:text-sm font-bold tracking-wider transition-all shadow-md active:scale-95 cursor-pointer shrink-0"
+                className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-rose-600/20 hover:bg-rose-600/35 border-2 border-rose-500/50 hover:border-rose-400 text-rose-300 hover:text-white rounded-xl font-algerian text-xs sm:text-sm font-bold tracking-wider transition-all shadow-md active:scale-95 cursor-pointer shrink-0"
                 title="Logout"
               >
                 <LogOut className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-rose-400 shrink-0" />
@@ -920,6 +942,7 @@ export default function App() {
                   locations={locations} 
                   workshops={workshops}
                   defects={defects}
+                  authSession={authSession}
                   onSearchSubmit={(shipName, location, fromDate, toDate, workshop) => {
                     setSearchFilter({ shipName, location, fromDate, toDate, workshop: workshop || '' });
                   }}

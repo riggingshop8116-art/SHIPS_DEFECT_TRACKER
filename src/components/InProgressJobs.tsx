@@ -42,11 +42,13 @@ export default function InProgressJobs({
   onNavigateToEntry,
   onNavigateToFind
 }: InProgressJobsProps) {
+  const isWorkshopUser = authSession?.role === 'workshop_user' && !!authSession.workshopCode && authSession.workshopCode !== 'HQ' && authSession.workshopCode !== 'HQ-ADMIN';
+
   // Search and filter state
   const [searchKeyword, setSearchKeyword] = useState('');
   const [filterShip, setFilterShip] = useState('');
   const [filterWorkshop, setFilterWorkshop] = useState(
-    authSession?.role === 'workshop_user' && authSession.workshopCode && authSession.workshopCode !== 'HQ' && authSession.workshopCode !== 'HQ-ADMIN'
+    isWorkshopUser && authSession?.workshopCode
       ? authSession.workshopCode
       : 'all'
   );
@@ -86,9 +88,21 @@ export default function InProgressJobs({
       // Must NOT be solved
       if (d.status === 'Solved') return false;
 
-      // Workshop filter
-      if (filterWorkshop !== 'all') {
-        const matchWs = (d.workshopCode && d.workshopCode === filterWorkshop) ||
+      // Strict Per-Shop Isolation for workshop users
+      if (isWorkshopUser && authSession?.workshopCode) {
+        const userWsCode = authSession.workshopCode.toUpperCase();
+        const userWsNameEn = (authSession.workshopNameEn || '').toLowerCase();
+        const userWsNameBn = authSession.workshopNameBn || '';
+
+        const matchWs = (d.workshopCode && d.workshopCode.toUpperCase() === userWsCode) ||
+                        (d.workshop && (
+                          d.workshop.toUpperCase().includes(userWsCode) ||
+                          (userWsNameEn && d.workshop.toLowerCase().includes(userWsNameEn)) ||
+                          (userWsNameBn && d.workshop.includes(userWsNameBn))
+                        ));
+        if (!matchWs) return false;
+      } else if (filterWorkshop !== 'all') {
+        const matchWs = (d.workshopCode && d.workshopCode.toUpperCase() === filterWorkshop.toUpperCase()) ||
                         (d.workshop && d.workshop.toLowerCase().includes(filterWorkshop.toLowerCase()));
         if (!matchWs) return false;
       }
@@ -108,7 +122,7 @@ export default function InProgressJobs({
 
       return true;
     });
-  }, [defects, filterWorkshop, filterShip, searchKeyword]);
+  }, [defects, isWorkshopUser, authSession, filterWorkshop, filterShip, searchKeyword]);
 
   // Handle opening solution modal
   const handleOpenSolveModal = (defect: Defect) => {
@@ -195,17 +209,17 @@ export default function InProgressJobs({
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="bg-amber-500/20 border border-amber-400/50 px-4 py-2 rounded-2xl text-center shadow-md">
-            <span className="text-xs text-amber-200 font-mono block">চলমান কাজ</span>
-            <span className="text-2xl font-black text-amber-400 font-mono">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0">
+          <div className="bg-amber-500/20 border border-amber-400/50 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-2xl text-center shadow-md">
+            <span className="text-[11px] sm:text-xs text-amber-200 font-mono block">চলমান কাজ</span>
+            <span className="text-xl sm:text-2xl font-black text-amber-400 font-mono">
               {inProgressDefects.length}
             </span>
           </div>
           <button
             type="button"
             onClick={onNavigateToEntry}
-            className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#001733] font-algerian font-bold px-4 py-3 rounded-2xl text-xs flex items-center gap-2 transition-all cursor-pointer shadow-lg active:scale-95 shrink-0 uppercase tracking-wider"
+            className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#001733] font-algerian font-bold px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl text-xs flex items-center gap-2 transition-all cursor-pointer shadow-lg active:scale-95 shrink-0 uppercase tracking-wider"
           >
             <PlusCircle className="h-4 w-4 text-[#001733]" />
             <span>NEW DEFECT ENTRY</span>
@@ -265,20 +279,34 @@ export default function InProgressJobs({
           <div className="space-y-1">
             <label className="text-xs font-bold text-amber-300 uppercase flex items-center gap-1.5">
               <Building2 className="h-3.5 w-3.5 text-amber-400" />
-              <span>FILTER BY WORKSHOP</span>
+              <span>{isWorkshopUser ? 'ASSIGNED SHOP (আপনার শপ)' : 'FILTER BY WORKSHOP'}</span>
             </label>
-            <select
-              value={filterWorkshop}
-              onChange={(e) => setFilterWorkshop(e.target.value)}
-              className="w-full px-3 py-2.5 bg-black/40 border border-white/20 focus:border-amber-400 rounded-xl text-xs text-white outline-none cursor-pointer"
-            >
-              <option value="all" className="bg-[#001738] text-white">All Workshops (সকল শপ)</option>
-              {workshops.map(ws => (
-                <option key={ws.id} value={ws.code} className="bg-[#001738] text-white">
-                  {ws.code} — {ws.nameEn} ({ws.nameBn})
-                </option>
-              ))}
-            </select>
+            {isWorkshopUser ? (
+              <div className="w-full px-3.5 py-2.5 bg-gradient-to-r from-amber-500/20 via-[#001f4d] to-black/40 border border-amber-400/60 rounded-xl text-xs text-amber-200 font-bold flex items-center justify-between shadow-inner gap-2">
+                <span className="flex items-center gap-2 min-w-0 flex-1">
+                  <span className="px-2 py-0.5 bg-amber-400 text-[#001733] font-mono text-[11px] rounded-md font-black shrink-0">
+                    {authSession?.workshopCode}
+                  </span>
+                  <span className="break-words text-white font-medium text-xs sm:text-sm">{authSession?.workshopNameEn} ({authSession?.workshopNameBn})</span>
+                </span>
+                <span className="text-[10px] font-mono font-black text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded border border-amber-400/40 uppercase shrink-0">
+                  🔒 LOCKED
+                </span>
+              </div>
+            ) : (
+              <select
+                value={filterWorkshop}
+                onChange={(e) => setFilterWorkshop(e.target.value)}
+                className="w-full px-3 py-2.5 bg-black/40 border border-white/20 focus:border-amber-400 rounded-xl text-xs text-white outline-none cursor-pointer"
+              >
+                <option value="all" className="bg-[#001738] text-white">All Workshops (সকল শপ)</option>
+                {workshops.map(ws => (
+                  <option key={ws.id} value={ws.code} className="bg-[#001738] text-white">
+                    {ws.code} — {ws.nameEn} ({ws.nameBn})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
         </div>
@@ -362,7 +390,7 @@ export default function InProgressJobs({
                   <span className="text-[11px] font-bold text-amber-400 uppercase block mb-1">
                     ডিফেক্ট বিবরণ (Defect Description):
                   </span>
-                  <p className="line-clamp-3">
+                  <p className="break-words">
                     {defect.defectDescription || 'কোনো লিখিত বিবরণ নেই।'}
                   </p>
                 </div>
@@ -389,19 +417,19 @@ export default function InProgressJobs({
               </div>
 
               {/* Action Button: ADD SOLUTION */}
-              <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-3">
-                <span className="text-[11px] text-slate-400 font-mono">
+              <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <span className="text-[11px] text-slate-400 font-mono shrink-0">
                   আইডি: {defect.id.slice(-8)}
                 </span>
                 
                 <button
                   type="button"
                   onClick={() => handleOpenSolveModal(defect)}
-                  className="px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-white font-algerian font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-900/30 flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+                  className="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-white font-algerian font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 text-center break-words"
                 >
-                  <Wrench className="h-4 w-4 text-amber-300" />
+                  <Wrench className="h-4 w-4 text-amber-300 shrink-0" />
                   <span>সমাধান যোগ করুন (ADD SOLUTION)</span>
-                  <ArrowRight className="h-3.5 w-3.5 text-white" />
+                  <ArrowRight className="h-3.5 w-3.5 text-white shrink-0" />
                 </button>
               </div>
 

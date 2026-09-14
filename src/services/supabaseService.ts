@@ -149,16 +149,25 @@ export function mapDockyardConfigToDb(cfg: DockyardConfig): any {
 }
 
 export function mapUserProfileFromDb(row: any): UserProfile {
+  let adminPassword = 'admin123';
+  if (row.password) {
+    adminPassword = row.password;
+  } else if (row.email && typeof row.email === 'string' && row.email.startsWith('pass:')) {
+    adminPassword = row.email.substring(5);
+  }
+
   return {
     name: row.name || DEFAULT_PROFILE.name,
     rank: row.rank || DEFAULT_PROFILE.rank,
     officialId: row.p_no || row.officialId || DEFAULT_PROFILE.officialId,
     avatar: row.avatar || DEFAULT_PROFILE.avatar,
-    role: 'admin'
+    role: 'admin',
+    password: adminPassword
   };
 }
 
 export function mapUserProfileToDb(p: UserProfile): any {
+  const pwd = p.password || 'admin123';
   return {
     id: 'admin_default',
     name: p.name || 'Lt Commander M. A. Rahman',
@@ -166,7 +175,7 @@ export function mapUserProfileToDb(p: UserProfile): any {
     p_no: p.officialId || 'admin',
     appointment: 'Managing Director & Chief Engineer',
     intercom: '4001',
-    email: 'md.dockyard@navy.mil.bd',
+    email: `pass:${pwd}`,
     unit: 'Naval Dockyard Headquarters',
     avatar: p.avatar || '',
     updated_at: new Date().toISOString()

@@ -80,6 +80,7 @@ export interface UserProfile {
   officialId: string;
   avatar: string;
   role?: 'admin' | 'workshop_user';
+  password?: string;
 }
 
 export interface AppSettings {

@@ -23,16 +23,17 @@ import {
   X,
   ExternalLink
 } from 'lucide-react';
-import { Workshop, DockyardConfig, AuthSession } from '../types';
-import navyFleetBg from '../assets/images/navy_fleet_ships.jpg';
+import { Workshop, DockyardConfig, AuthSession, UserProfile } from '../types';
+import navyFleetBg from '../assets/images/ships1.jpg';
 
 interface LoginProps {
   workshops: Workshop[];
   dockyardConfig: DockyardConfig;
+  profile?: UserProfile;
   onLoginSuccess: (session: AuthSession) => void;
 }
 
-export default function Login({ workshops, dockyardConfig, onLoginSuccess }: LoginProps) {
+export default function Login({ workshops, dockyardConfig, profile, onLoginSuccess }: LoginProps) {
   // Workshop Selection & Search State
   const [selectedWorkshopId, setSelectedWorkshopId] = useState<string>(workshops[0]?.id || 'ws-01');
   const [workshopSearchQuery, setWorkshopSearchQuery] = useState<string>('');
@@ -40,16 +41,16 @@ export default function Login({ workshops, dockyardConfig, onLoginSuccess }: Log
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Workshop Form Credentials
-  const [username, setUsername] = useState<string>('oic.ws01');
-  const [password, setPassword] = useState<string>('123456');
+  const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [workshopError, setWorkshopError] = useState<string>('');
   const [isWorkshopSubmitting, setIsWorkshopSubmitting] = useState<boolean>(false);
 
   // Admin Modal State & Form Credentials
   const [isAdminModalOpen, setIsAdminModalOpen] = useState<boolean>(false);
-  const [adminUsername, setAdminUsername] = useState<string>('admin');
-  const [adminPassword, setAdminPassword] = useState<string>('admin123');
+  const [adminUsername, setAdminUsername] = useState<string>('');
+  const [adminPassword, setAdminPassword] = useState<string>('');
   const [showAdminPassword, setShowAdminPassword] = useState<boolean>(false);
   const [adminError, setAdminError] = useState<string>('');
   const [isAdminSubmitting, setIsAdminSubmitting] = useState<boolean>(false);
@@ -103,8 +104,8 @@ export default function Login({ workshops, dockyardConfig, onLoginSuccess }: Log
     setIsDropdownOpen(false);
     setWorkshopSearchQuery('');
     setWorkshopError('');
-    setUsername(`oic.${ws.code.toLowerCase().replace('-', '')}`);
-    setPassword('123456');
+    setUsername(ws.username || `oic.${ws.code.toLowerCase().replace(/[^a-z0-9]/g, '')}`);
+    setPassword('');
   };
 
   // Workshop Submit Handler
@@ -115,12 +116,49 @@ export default function Login({ workshops, dockyardConfig, onLoginSuccess }: Log
 
     setTimeout(() => {
       setIsWorkshopSubmitting(false);
-      if (!username.trim()) {
-        setWorkshopError('Please enter your Officer Service ID / Username.');
+      const inputUser = username.trim().toLowerCase();
+      const inputPass = password.trim();
+
+      if (!inputUser) {
+        setWorkshopError('অনুগ্রহ করে আপনার শপ ইউজার আইডি / সার্ভিস নং দিন।');
         return;
       }
-      if (!password.trim()) {
-        setWorkshopError('Please enter your workshop account password.');
+      if (!inputPass) {
+        setWorkshopError('অনুগ্রহ করে আপনার শপের একাউন্ট পাসওয়ার্ড দিন।');
+        return;
+      }
+
+      // Check if input matches selected workshop first
+      let targetWs = workshops.find(ws => 
+        ws.id === selectedWorkshopId && (
+          (ws.username && ws.username.trim().toLowerCase() === inputUser) ||
+          ws.code.trim().toLowerCase() === inputUser ||
+          `oic.${ws.code.toLowerCase().replace(/[^a-z0-9]/g, '')}` === inputUser
+        )
+      );
+
+      // If not matching selected workshop, search any workshop in the system
+      if (!targetWs) {
+        targetWs = workshops.find(ws => 
+          (ws.username && ws.username.trim().toLowerCase() === inputUser) ||
+          ws.code.trim().toLowerCase() === inputUser ||
+          `oic.${ws.code.toLowerCase().replace(/[^a-z0-9]/g, '')}` === inputUser
+        );
+      }
+
+      if (!targetWs) {
+        setWorkshopError('❌ ইউজার আইডি পাওয়া যায়নি! এডমিন প্যানেলে নির্ধারিত সঠিক শপ ইউজার আইডি দিন।');
+        return;
+      }
+
+      if (targetWs.status === 'inactive') {
+        setWorkshopError(`⚠️ ${targetWs.nameEn} (${targetWs.code}) অ্যাকাউন্টটি বর্তমানে নিষ্ক্রিয় রয়েছে। অনুগ্রহ করে হেডকোয়ার্টার্স এডমিনের সাথে যোগাযোগ করুন।`);
+        return;
+      }
+
+      const expectedPassword = targetWs.password ? targetWs.password.trim() : '123456';
+      if (inputPass !== expectedPassword) {
+        setWorkshopError(`❌ পাসওয়ার্ড ভুল হয়েছে! ${targetWs.code} এর জন্য এডমিন প্যানেলে নির্ধারিত সঠিক পাসওয়ার্ড প্রদান করুন।`);
         return;
       }
 
@@ -128,12 +166,13 @@ export default function Login({ workshops, dockyardConfig, onLoginSuccess }: Log
       onLoginSuccess({
         isLoggedIn: true,
         role: 'workshop_user',
-        workshopId: currentWorkshop.id,
-        workshopCode: currentWorkshop.code,
-        workshopNameBn: currentWorkshop.nameBn,
-        workshopNameEn: currentWorkshop.nameEn,
-        username: username,
-        officerName: `${currentWorkshop.oicRank} ${currentWorkshop.oicName}`,
+        workshopId: targetWs.id,
+        workshopCode: targetWs.code,
+        workshopNameBn: targetWs.nameBn,
+        workshopNameEn: targetWs.nameEn,
+        username: targetWs.username || username.trim(),
+        officerName: `${targetWs.oicRank} ${targetWs.oicName}`,
+        photo: targetWs.photo,
         loginTime: new Date().toISOString()
       });
     }, 300);
@@ -147,41 +186,47 @@ export default function Login({ workshops, dockyardConfig, onLoginSuccess }: Log
 
     setTimeout(() => {
       setIsAdminSubmitting(false);
-      if (!adminUsername.trim()) {
+      const inputAdminUser = adminUsername.trim().toLowerCase();
+      const inputAdminPass = adminPassword.trim();
+
+      if (!inputAdminUser) {
         setAdminError('Please provide the HQ Administrator ID.');
         return;
       }
-      if (!adminPassword.trim()) {
+      if (!inputAdminPass) {
         setAdminError('Please provide the Administrative Security Key.');
         return;
       }
 
-      if (adminUsername.toLowerCase() === 'admin' && (adminPassword === 'admin123' || adminPassword === '123456')) {
-        setIsAdminModalOpen(false);
-        onLoginSuccess({
-          isLoggedIn: true,
-          role: 'admin',
-          workshopId: 'all',
-          workshopCode: 'HQ-ADMIN',
-          workshopNameBn: 'সুপারভাইজার ও হেডকোয়ার্টার্স',
-          workshopNameEn: 'Naval Dockyard Admin HQ',
-          username: adminUsername,
-          officerName: 'Lt Commander M. A. Rahman (HQ Command)',
-          loginTime: new Date().toISOString()
-        });
-      } else {
-        setAdminError('Invalid HQ Administrator credentials. (Default: admin / admin123)');
-      }
-    }, 350);
-  };
+      const expectedAdminId = (profile?.officialId || 'admin').trim().toLowerCase();
+      const expectedAdminPass = (profile?.password || 'admin123').trim();
 
-  // Quick Demo Access Helper for Workshops
-  const handleQuickDemo = (code: string) => {
-    const targetWs = workshops.find(w => w.code === code) || workshops[0];
-    setSelectedWorkshopId(targetWs.id);
-    setUsername(`oic.${targetWs.code.toLowerCase().replace('-', '')}`);
-    setPassword('123456');
-    setWorkshopError('');
+      const isIdValid = inputAdminUser === expectedAdminId || (expectedAdminId === 'admin' && inputAdminUser === 'admin');
+      const isPassValid = inputAdminPass === expectedAdminPass;
+
+      if (!isIdValid) {
+        setAdminError('❌ ভুল এডমিন ইউজার আইডি! এডমিন প্যানেল প্রোফাইলে নির্ধারিত সঠিক আইডি দিন।');
+        return;
+      }
+
+      if (!isPassValid) {
+        setAdminError('❌ ভুল এডমিন পাসওয়ার্ড! এডমিন প্যানেলে নির্ধারিত সঠিক পাসওয়ার্ড প্রদান করুন।');
+        return;
+      }
+
+      setIsAdminModalOpen(false);
+      onLoginSuccess({
+        isLoggedIn: true,
+        role: 'admin',
+        workshopId: 'all',
+        workshopCode: 'HQ-ADMIN',
+        workshopNameBn: 'সুপারভাইজার ও হেডকোয়ার্টার্স',
+        workshopNameEn: 'Naval Dockyard Admin HQ',
+        username: profile?.officialId || adminUsername.trim(),
+        officerName: profile?.name ? `${profile.rank} ${profile.name}` : 'Lt Commander M. A. Rahman (HQ Command)',
+        loginTime: new Date().toISOString()
+      });
+    }, 350);
   };
 
   return (
@@ -215,25 +260,25 @@ export default function Login({ workshops, dockyardConfig, onLoginSuccess }: Log
       </div>
 
       {/* =========================================================================
-          2. OFFICIAL WEBPAGE HEADER (LEFT: ASD MONOGRAM LOGO, RIGHT: AREA SUPERINTENDENT DOCKYARD LARGE DISPLAY)
+          2. OFFICIAL WEBPAGE HEADER (CENTER ALIGNED: ASD MONOGRAM LOGO & AREA SUPERINTENDENT DOCKYARD)
       ========================================================================= */}
-      <header id="home-navy-header" className="relative z-20 w-full min-h-16 sm:min-h-24 py-2.5 sm:py-4 bg-[#001738] text-white px-3 sm:px-6 md:px-10 shadow-2xl shrink-0 border-b-2 border-amber-500 select-none flex items-center">
-        <div className="w-full flex items-center gap-2.5 sm:gap-6 md:gap-8">
+      <header id="home-navy-header" className="relative z-20 w-full min-h-16 sm:min-h-24 py-2.5 sm:py-4 bg-[#001738] text-white px-3 sm:px-6 md:px-10 shadow-2xl shrink-0 border-b-2 border-amber-500 select-none flex items-center justify-center">
+        <div className="w-full max-w-7xl flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 md:gap-8 text-center">
           
-          {/* Left: Official Crest / Monogram Logo (Original proportions, exactly as uploaded, uncropped) */}
+          {/* Official Crest / Monogram Logo (Original proportions, uncropped, centered) */}
           <div className="shrink-0 flex items-center justify-center">
             <img 
               src={dockyardConfig.headerLogoUrl || '/asd_monogram.jpg'} 
               alt="Area Superintendent Dockyard Logo" 
-              className="h-11 sm:h-20 md:h-22 lg:h-24 w-auto max-w-[90px] sm:max-w-[180px] object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.85)] select-none" 
+              className="h-11 sm:h-18 md:h-20 lg:h-22 w-auto max-w-[85px] sm:max-w-[150px] object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.85)] select-none" 
             />
           </div>
 
-          {/* Right of Logo: AREA SUPERINTENDENT DOCKYARD (Big, prominent, across the entire header without subtitle) */}
-          <div className="flex-1 min-w-0 flex items-center justify-start">
+          {/* Center Aligned Title: AREA SUPERINTENDENT DOCKYARD (Big, prominent, perfectly centered on all screen sizes) */}
+          <div className="flex-1 min-w-0 flex items-center justify-center text-center">
             <h1 
               id="home-header-title"
-              className="text-base sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-amber-400 font-algerian tracking-wider uppercase drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] leading-tight whitespace-nowrap overflow-hidden text-ellipsis"
+              className="text-base sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black text-amber-400 font-algerian tracking-wider uppercase drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] leading-tight text-center break-words"
             >
               {dockyardConfig.headerTitle || 'AREA SUPERINTENDENT DOCKYARD'}
             </h1>
@@ -332,15 +377,15 @@ export default function Login({ workshops, dockyardConfig, onLoginSuccess }: Log
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="w-full flex items-center justify-between px-4 py-3 bg-[#000c1e]/85 backdrop-blur-md border border-amber-500/40 hover:border-amber-300 rounded-xl text-left text-white shadow-inner transition-colors cursor-pointer group"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                       <span className="px-2 py-0.5 bg-amber-500/20 border border-amber-400/40 rounded text-amber-300 text-xs font-mono font-bold shrink-0">
                         {currentWorkshop.code}
                       </span>
-                      <div className="truncate">
-                        <span className="font-bold text-sm block truncate text-white">
+                      <div className="min-w-0 flex-1 text-left">
+                        <span className="font-bold text-xs sm:text-sm block text-white break-words">
                           {currentWorkshop.nameEn}
                         </span>
-                        <span className="text-[11px] text-cyan-200/80 block truncate font-mono">
+                        <span className="text-[10px] sm:text-[11px] text-cyan-200/80 block font-mono">
                           {currentWorkshop.category}
                         </span>
                       </div>
@@ -480,40 +525,9 @@ export default function Login({ workshops, dockyardConfig, onLoginSuccess }: Log
               </button>
             </form>
 
-            {/* Quick Demo Shortcuts */}
-            <div className="mt-5 pt-3.5 border-t border-white/10">
-              <p className="text-[11px] text-slate-400 font-mono text-center mb-2 flex items-center justify-center gap-1.5">
-                <Sparkles className="h-3 w-3 text-amber-400" />
-                <span>Quick Fill Demo Workshops:</span>
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('WS-01')}
-                  className="px-2 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] text-amber-300 font-medium font-mono text-center transition-colors truncate cursor-pointer"
-                >
-                  ⚓ WS-01 (Rigging)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('WS-02')}
-                  className="px-2 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] text-cyan-300 font-medium font-mono text-center transition-colors truncate cursor-pointer"
-                >
-                  ⚙️ WS-02 (Machine)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemo('WS-05')}
-                  className="px-2 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] text-emerald-300 font-medium font-mono text-center transition-colors truncate cursor-pointer"
-                >
-                  ⚡ WS-05 (Electrical)
-                </button>
-              </div>
-            </div>
-
           </div>
 
-          <p className="text-center text-[10px] text-slate-400/90 font-mono mt-3 tracking-widest uppercase">
+          <p className="text-center text-[10px] text-slate-400/90 font-mono mt-3 tracking-widest uppercase break-words px-2">
             RESTRICTED MILITARY INTRANET • DOCKYARD SECURITY PROTOCOL
           </p>
         </div>
@@ -522,14 +536,14 @@ export default function Login({ workshops, dockyardConfig, onLoginSuccess }: Log
       {/* =========================================================================
           4. OFFICIAL WEBPAGE FOOTER WITH ADMIN PORTAL ENTRY ICON
       ========================================================================= */}
-      <footer className="relative z-20 w-full bg-[#000d1e]/95 backdrop-blur-md border-t border-white/10 px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3 shadow-2xl">
+      <footer className="relative z-20 w-full bg-[#000d1e]/95 backdrop-blur-md border-t border-white/10 px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-3 shadow-2xl">
         
         {/* Left: Security & Copyright */}
-        <div className="flex flex-col">
-          <p className="text-xs text-slate-300 font-medium">
+        <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
+          <p className="text-xs text-slate-300 font-medium break-words">
             © 2026 Bangladesh Navy Dockyard • Directorate of Naval Engineering
           </p>
-          <p className="text-[10px] text-slate-400 font-mono">
+          <p className="text-[10px] text-slate-400 font-mono break-words">
             For Official Armed Forces Use Only • Unauthorized Access Prohibited
           </p>
         </div>
@@ -687,26 +701,6 @@ export default function Login({ workshops, dockyardConfig, onLoginSuccess }: Log
                 <ArrowRight className="h-4 w-4" />
               </button>
             </form>
-
-            {/* Quick Fill Admin Demo Credentials (Matching User Dialog's Style) */}
-            <div className="mt-5 pt-3.5 border-t border-white/10">
-              <p className="text-[11px] text-slate-400 font-mono text-center mb-2 flex items-center justify-center gap-1.5">
-                <Sparkles className="h-3 w-3 text-amber-400" />
-                <span>Quick Fill HQ Admin Access:</span>
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setAdminUsername('admin');
-                  setAdminPassword('admin123');
-                  setAdminError('');
-                }}
-                className="w-full px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-amber-400/40 rounded-xl text-xs text-amber-300 font-mono font-medium text-center transition-colors flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <ShieldCheck className="h-4 w-4 text-amber-400" />
-                <span>Auto-fill Admin (admin / admin123)</span>
-              </button>
-            </div>
 
           </div>
         </div>

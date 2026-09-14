@@ -390,5 +390,6 @@ export const DEFAULT_PROFILE: UserProfile = {
   rank: 'Engineer Officer (Marine Engineer)',
   officialId: 'P. No - 1947',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-  role: 'admin'
+  role: 'admin',
+  password: 'admin123'
 };

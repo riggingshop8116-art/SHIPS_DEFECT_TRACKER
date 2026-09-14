@@ -148,11 +148,11 @@ export default function Sidebar({
                   : 'hover:bg-white/5 hover:text-white text-slate-200'
               }`}
             >
-              <div className="flex items-center gap-3 truncate">
+              <div className="flex items-center gap-3 min-w-0">
                 <Building2 className={`h-5 w-5 shrink-0 ${activeTab === 'admin' && adminSubTab === 'workshops' ? 'text-amber-400' : 'text-slate-400'}`} />
-                <span className="font-algerian tracking-wider truncate">WORKSHOPS</span>
+                <span className="font-algerian tracking-wider whitespace-nowrap">WORKSHOPS</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-mono font-bold shrink-0">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-mono font-bold shrink-0 ml-2">
                 {workshopsCount}
               </span>
             </button>
@@ -167,11 +167,11 @@ export default function Sidebar({
                   : 'hover:bg-white/5 hover:text-white text-slate-200'
               }`}
             >
-              <div className="flex items-center gap-3 truncate">
+              <div className="flex items-center gap-3 min-w-0">
                 <Ship className={`h-5 w-5 shrink-0 ${activeTab === 'admin' && adminSubTab === 'fleet' ? 'text-amber-400' : 'text-slate-400'}`} />
-                <span className="font-algerian tracking-wider truncate">FLEET (WARSHIPS)</span>
+                <span className="font-algerian tracking-wider whitespace-nowrap">FLEET (WARSHIPS)</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-mono font-bold shrink-0">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-mono font-bold shrink-0 ml-2">
                 {shipsCount}
               </span>
             </button>
@@ -187,7 +187,7 @@ export default function Sidebar({
               }`}
             >
               <MapPin className={`h-5 w-5 shrink-0 ${activeTab === 'admin' && adminSubTab === 'locations' ? 'text-amber-400' : 'text-slate-400'}`} />
-              <span className="font-algerian tracking-wider truncate">COMPARTMENTS</span>
+              <span className="font-algerian tracking-wider whitespace-nowrap">COMPARTMENTS</span>
             </button>
 
             {/* 4. PRODUCTION DEPARTMENT */}
@@ -201,7 +201,7 @@ export default function Sidebar({
               }`}
             >
               <Layers className={`h-5 w-5 shrink-0 ${activeTab === 'production' ? 'text-amber-400' : 'text-slate-400'}`} />
-              <span className="font-algerian tracking-wider truncate">PRODUCTION DEPT</span>
+              <span className="font-algerian tracking-wider whitespace-nowrap">PRODUCTION DEPT</span>
             </button>
 
             {/* 5. SETTINGS (সেটিংস - সাইটের যাবতীয় স্টেটিক অপশন) */}
@@ -214,11 +214,11 @@ export default function Sidebar({
                   : 'hover:bg-white/5 hover:text-white text-slate-200'
               }`}
             >
-              <div className="flex items-center gap-3 truncate">
+              <div className="flex items-center gap-3 min-w-0">
                 <SettingsIcon className={`h-5 w-5 shrink-0 ${activeTab === 'admin' && (adminSubTab === 'settings' || adminSubTab === 'site_info') ? 'text-amber-400 animate-spin-slow' : 'text-slate-400'}`} />
-                <span className="font-algerian tracking-wider truncate">SETTINGS (সেটিংস)</span>
+                <span className="font-algerian tracking-wider whitespace-nowrap">SETTINGS (সেটিংস)</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono font-bold shrink-0">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono font-bold shrink-0 ml-2">
                 STATIC
               </span>
             </button>
@@ -233,11 +233,11 @@ export default function Sidebar({
                   : 'hover:bg-white/5 hover:text-white text-slate-200'
               }`}
             >
-              <div className="flex items-center gap-3 truncate">
+              <div className="flex items-center gap-3 min-w-0">
                 <Users className={`h-5 w-5 shrink-0 ${activeTab === 'admin' && adminSubTab === 'users' ? 'text-amber-400' : 'text-slate-400'}`} />
-                <span className="font-algerian tracking-wider truncate">USERS (ইউজার)</span>
+                <span className="font-algerian tracking-wider whitespace-nowrap">USERS (ইউজার)</span>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-mono font-bold shrink-0">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-mono font-bold shrink-0 ml-2">
                 {workshopsCount}
               </span>
             </button>
@@ -256,7 +256,7 @@ export default function Sidebar({
               }`}
             >
               <LayoutDashboard className={`h-5 w-5 shrink-0 ${activeTab === 'dashboard' ? 'text-amber-400' : 'text-slate-400'}`} />
-              <span className="font-algerian tracking-wider truncate">DASHBOARD</span>
+              <span className="font-algerian tracking-wider whitespace-nowrap">DASHBOARD</span>
             </button>
 
             {/* 2. DEFECT ENTRY */}
@@ -270,7 +270,7 @@ export default function Sidebar({
               }`}
             >
               <PlusCircle className={`h-5 w-5 shrink-0 ${activeTab === 'entry' ? 'text-amber-400' : 'text-slate-400'}`} />
-              <span className="font-algerian tracking-wider truncate">DEFECT ENTRY</span>
+              <span className="font-algerian tracking-wider whitespace-nowrap">DEFECT ENTRY</span>
             </button>
 
             {/* 3. IN PROGRESS JOBS (ইন প্রগ্রেস জব) */}
@@ -283,12 +283,12 @@ export default function Sidebar({
                   : 'hover:bg-white/5 hover:text-white text-slate-200'
               }`}
             >
-              <div className="flex items-center gap-3 truncate">
+              <div className="flex items-center gap-3 min-w-0">
                 <Hourglass className={`h-5 w-5 shrink-0 ${activeTab === 'inprogress' ? 'text-amber-400 animate-pulse' : 'text-slate-400'}`} />
-                <span className="font-algerian tracking-wider truncate">IN PROGRESS JOBS</span>
+                <span className="font-algerian tracking-wider whitespace-nowrap">IN PROGRESS JOBS</span>
               </div>
               {pendingCount !== undefined && pendingCount > 0 && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/30 border border-rose-400/50 text-rose-300 font-mono font-bold shrink-0 animate-pulse">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/30 border border-rose-400/50 text-rose-300 font-mono font-bold shrink-0 animate-pulse ml-2">
                   {pendingCount}
                 </span>
               )}
@@ -305,7 +305,7 @@ export default function Sidebar({
               }`}
             >
               <Search className={`h-5 w-5 shrink-0 ${activeTab === 'find' ? 'text-amber-400' : 'text-slate-400'}`} />
-              <span className="font-algerian tracking-wider truncate">DEFECT FIND</span>
+              <span className="font-algerian tracking-wider whitespace-nowrap">DEFECT FIND</span>
             </button>
 
             {/* 5. PRODUCTION DEPARTMENT */}
@@ -319,7 +319,7 @@ export default function Sidebar({
               }`}
             >
               <Layers className={`h-5 w-5 shrink-0 ${activeTab === 'production' ? 'text-amber-400' : 'text-slate-400'}`} />
-              <span className="font-algerian tracking-wider truncate">PRODUCTION DEPARTMENT</span>
+              <span className="font-algerian tracking-wider whitespace-nowrap">PRODUCTION DEPARTMENT</span>
             </button>
           </div>
         )}

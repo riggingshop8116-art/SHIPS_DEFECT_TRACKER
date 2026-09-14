@@ -86,6 +86,7 @@ export default function DefectEntry({
   }, [activeWorkshopCode, workshops]);
 
   // Derived selected workshop and filtered dropdown items
+  const isWorkshopLocked = !!activeWorkshopCode && activeWorkshopCode !== 'HQ' && activeWorkshopCode !== 'HQ-ADMIN';
   const selectedWorkshop = workshops.find(w => w.id === selectedWorkshopId) || 
                            workshops.find(w => w.code === activeWorkshopCode) || 
                            workshops[0];
@@ -284,35 +285,51 @@ export default function DefectEntry({
                 </span>
               </label>
 
-              {/* Trigger Button */}
-              <button
-                type="button"
-                id="workshop-select-btn"
-                onClick={() => {
-                  setIsWsDropdownOpen(!isWsDropdownOpen);
-                  setIsShipDropdownOpen(false);
-                  setIsLocDropdownOpen(false);
-                }}
-                className={`w-full flex items-center justify-between border ${
-                  isWsDropdownOpen ? 'border-amber-400 ring-2 ring-amber-400/40' : 'border-amber-400/35 hover:border-amber-400'
-                } bg-[#000d1e] rounded-2xl px-4 py-3 outline-none text-sm text-white transition-all font-medium cursor-pointer shadow-inner`}
-              >
-                <div className="flex items-center gap-2.5 truncate">
-                  {selectedWorkshop ? (
-                    <>
-                      <span className="px-2 py-0.5 rounded-lg bg-amber-500/25 border border-amber-400/50 text-amber-300 text-xs font-mono font-bold shrink-0">
-                        {selectedWorkshop.code}
-                      </span>
-                      <span className="truncate font-semibold text-white">
-                        {selectedWorkshop.nameEn}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-slate-400">Select Responsible Workshop...</span>
-                  )}
+              {/* Trigger Button or Locked Display */}
+              {isWorkshopLocked ? (
+                <div className="w-full flex items-center justify-between border border-amber-400/60 bg-gradient-to-r from-amber-500/20 via-[#001738] to-[#000d1e] rounded-2xl px-4 py-3 text-sm text-white font-medium shadow-inner gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <span className="px-2 py-0.5 rounded-lg bg-amber-400 text-[#001733] text-xs font-mono font-black shrink-0">
+                      {selectedWorkshop?.code}
+                    </span>
+                    <span className="break-words font-semibold text-white text-xs sm:text-sm">
+                      {selectedWorkshop?.nameEn} ({selectedWorkshop?.nameBn})
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono font-black text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded border border-amber-400/40 uppercase shrink-0">
+                    🔒 LOCKED
+                  </span>
                 </div>
-                <ChevronDown className={`h-4 w-4 text-amber-400 transition-transform shrink-0 ml-2 ${isWsDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
+              ) : (
+                <button
+                  type="button"
+                  id="workshop-select-btn"
+                  onClick={() => {
+                    setIsWsDropdownOpen(!isWsDropdownOpen);
+                    setIsShipDropdownOpen(false);
+                    setIsLocDropdownOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between border ${
+                    isWsDropdownOpen ? 'border-amber-400 ring-2 ring-amber-400/40' : 'border-amber-400/35 hover:border-amber-400'
+                  } bg-[#000d1e] rounded-2xl px-4 py-3 outline-none text-sm text-white transition-all font-medium cursor-pointer shadow-inner`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1 text-left">
+                    {selectedWorkshop ? (
+                      <>
+                        <span className="px-2 py-0.5 rounded-lg bg-amber-500/25 border border-amber-400/50 text-amber-300 text-xs font-mono font-bold shrink-0">
+                          {selectedWorkshop.code}
+                        </span>
+                        <span className="break-words font-semibold text-white text-xs sm:text-sm">
+                          {selectedWorkshop.nameEn}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-slate-400 text-xs sm:text-sm">Select Responsible Workshop...</span>
+                    )}
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-amber-400 transition-transform shrink-0 ml-2 ${isWsDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+              )}
 
               {/* Dropdown Options List - STRICTLY OPENS DOWNWARDS */}
               {isWsDropdownOpen && (

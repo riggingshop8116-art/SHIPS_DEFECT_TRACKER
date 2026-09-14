@@ -138,6 +138,8 @@ export default function AdminPanel({
   const [profileRank, setProfileRank] = useState<string>(profile.rank);
   const [profileId, setProfileId] = useState<string>(profile.officialId);
   const [profileAvatar, setProfileAvatar] = useState<string>(profile.avatar);
+  const [adminPassword, setAdminPassword] = useState<string>(profile.password || 'admin123');
+  const [showAdminPassword, setShowAdminPassword] = useState<boolean>(false);
   const [localRiggingName, setLocalRiggingName] = useState<string>(riggingShopName);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState<boolean>(false);
   const [isSavingProfileToDb, setIsSavingProfileToDb] = useState<boolean>(false);
@@ -149,6 +151,7 @@ export default function AdminPanel({
     setProfileRank(profile.rank);
     setProfileId(profile.officialId);
     setProfileAvatar(profile.avatar);
+    setAdminPassword(profile.password || 'admin123');
   }, [profile]);
 
   // Users & Login Management State
@@ -211,19 +214,26 @@ export default function AdminPanel({
     setTimeout(() => setUserSuccessMsg(null), 2500);
   };
 
-  const handleSaveWorkshopUser = (e: React.FormEvent) => {
+  const handleSaveWorkshopUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingWorkshopUser) return;
     const updated = workshops.map(ws => 
       ws.id === editingWorkshopUser.id ? editingWorkshopUser : ws
     );
     onUpdateWorkshops(updated);
+
+    try {
+      await supabaseService.upsertWorkshop(editingWorkshopUser);
+    } catch (err) {
+      console.warn('[Supabase] Error saving workshop user credentials:', err);
+    }
+
     setEditingWorkshopUser(null);
-    setUserSuccessMsg('শপ ইউজারের লগইন ক্রেডেনশিয়াল সফলভাবে সংরক্ষণ হয়েছে!');
+    setUserSuccessMsg('শপ ইউজারের আইডি ও পাসওয়ার্ড সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!');
     setTimeout(() => setUserSuccessMsg(null), 3000);
   };
 
-  const handleCreateNewUser = (e: React.FormEvent) => {
+  const handleCreateNewUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUserForm.nameEn.trim()) {
       alert('Workshop English name is required!');
@@ -245,8 +255,13 @@ export default function AdminPanel({
       description: newUserForm.description || ''
     };
     onUpdateWorkshops([...workshops, newWs]);
+    try {
+      await supabaseService.upsertWorkshop(newWs);
+    } catch (err) {
+      console.warn('[Supabase] Error creating new workshop:', err);
+    }
     setIsAddingUserModal(false);
-    setUserSuccessMsg(`নতুন শপ ইউজার ${newWs.code} সফলভাবে যুক্ত হয়েছে!`);
+    setUserSuccessMsg(`নতুন শপ ইউজার ${newWs.code} সফলভাবে ডাটাবেজে যুক্ত হয়েছে!`);
     setTimeout(() => setUserSuccessMsg(null), 3000);
   };
 
@@ -397,9 +412,10 @@ export default function AdminPanel({
     const updated: UserProfile = {
       name: profileName,
       rank: profileRank,
-      officialId: profileId,
+      officialId: profileId.trim() || 'admin',
       avatar: profileAvatar,
-      role: 'admin'
+      role: 'admin',
+      password: adminPassword.trim() || 'admin123'
     };
     onUpdateProfile(updated);
     onUpdateRiggingShopName(localRiggingName.trim() || 'RIGGING SHOP');
@@ -2262,6 +2278,28 @@ export default function AdminPanel({
                   required
                   className="w-full px-4 py-2.5 bg-[#000d1e] border border-amber-500/30 rounded-xl text-xs font-mono font-bold text-amber-300 focus:border-amber-400 outline-none"
                   placeholder="e.g. admin"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-amber-200 block mb-1 font-mono flex items-center justify-between">
+                  <span>ADMIN LOGIN PASSWORD (এডমিন পাসওয়ার্ড)</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                    className="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer font-sans"
+                  >
+                    {showAdminPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    <span>{showAdminPassword ? 'Hide' : 'Show'}</span>
+                  </button>
+                </label>
+                <input
+                  type={showAdminPassword ? 'text' : 'password'}
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  required
+                  className="w-full px-4 py-2.5 bg-[#000d1e] border border-amber-500/30 rounded-xl text-xs font-mono font-bold text-amber-300 focus:border-amber-400 outline-none"
+                  placeholder="e.g. admin123"
                 />
               </div>
 

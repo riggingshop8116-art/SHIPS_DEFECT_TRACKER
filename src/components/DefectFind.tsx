@@ -9,13 +9,14 @@ import {
   CheckCircle2, 
   Calendar 
 } from 'lucide-react';
-import { Workshop, Defect } from '../types';
+import { Workshop, Defect, AuthSession } from '../types';
 
 interface DefectFindProps {
   ships: string[];
   locations: string[];
   workshops?: Workshop[];
   defects?: Defect[];
+  authSession?: AuthSession | null;
   onSearchSubmit?: (shipName: string, location: string, fromDate: string, toDate: string, workshop?: string) => void;
 }
 
@@ -24,12 +25,17 @@ export default function DefectFind({
   locations, 
   workshops = [], 
   defects = [],
+  authSession,
   onSearchSubmit 
 }: DefectFindProps) {
+  const isWorkshopUser = authSession?.role === 'workshop_user' && !!authSession.workshopCode && authSession.workshopCode !== 'HQ' && authSession.workshopCode !== 'HQ-ADMIN';
+
   const fromDateInputRef = useRef<HTMLInputElement>(null);
   const toDateInputRef = useRef<HTMLInputElement>(null);
 
-  const [filterWorkshop, setFilterWorkshop] = useState<string>('');
+  const [filterWorkshop, setFilterWorkshop] = useState<string>(
+    isWorkshopUser && authSession?.workshopCode ? authSession.workshopCode : ''
+  );
   const [filterShip, setFilterShip] = useState<string>('');
   const [filterLocation, setFilterLocation] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>('');
@@ -39,25 +45,41 @@ export default function DefectFind({
   // Compute filtered defects directly in-page so user stays on Defect Find
   const filteredResults = useMemo(() => {
     return defects.filter(d => {
-      if (filterWorkshop && d.workshop && !d.workshop.toLowerCase().includes(filterWorkshop.toLowerCase())) {
-        return false;
+      // Per-shop isolation for workshop user
+      if (isWorkshopUser && authSession?.workshopCode) {
+        const userWsCode = authSession.workshopCode.toUpperCase();
+        const userWsNameEn = (authSession.workshopNameEn || '').toLowerCase();
+        const userWsNameBn = authSession.workshopNameBn || '';
+
+        const matchWs = (d.workshopCode && d.workshopCode.toUpperCase() === userWsCode) ||
+                        (d.workshop && (
+                          d.workshop.toUpperCase().includes(userWsCode) ||
+                          (userWsNameEn && d.workshop.toLowerCase().includes(userWsNameEn)) ||
+                          (userWsNameBn && d.workshop.includes(userWsNameBn))
+                        ));
+        if (!matchWs) return false;
+      } else if (filterWorkshop) {
+        const matchWs = (d.workshopCode && d.workshopCode.toLowerCase().includes(filterWorkshop.toLowerCase())) ||
+                        (d.workshop && d.workshop.toLowerCase().includes(filterWorkshop.toLowerCase()));
+        if (!matchWs) return false;
       }
+
       if (filterShip && d.shipName !== filterShip) return false;
       if (filterLocation && d.location !== filterLocation) return false;
       if (fromDate && d.defectDate < fromDate) return false;
       if (toDate && d.defectDate > toDate) return false;
       return true;
     });
-  }, [defects, filterWorkshop, filterShip, filterLocation, fromDate, toDate]);
+  }, [defects, isWorkshopUser, authSession, filterWorkshop, filterShip, filterLocation, fromDate, toDate]);
 
   const handleReset = () => {
-    setFilterWorkshop('');
+    setFilterWorkshop(isWorkshopUser && authSession?.workshopCode ? authSession.workshopCode : '');
     setFilterShip('');
     setFilterLocation('');
     setFromDate('');
     setToDate('');
     if (onSearchSubmit) {
-      onSearchSubmit('', '', '', '', '');
+      onSearchSubmit('', '', '', '', isWorkshopUser && authSession?.workshopCode ? authSession.workshopCode : '');
     }
   };
 
@@ -117,21 +139,35 @@ export default function DefectFind({
             <div className="space-y-1.5">
               <label className="block text-xs font-algerian font-bold text-amber-300 mb-1 flex items-center gap-1.5 uppercase">
                 <Building2 className="h-3.5 w-3.5 text-amber-400" />
-                <span>WORKSHOP</span>
+                <span>{isWorkshopUser ? 'ASSIGNED SHOP (আপনার শপ)' : 'WORKSHOP'}</span>
               </label>
-              <select
-                id="workshop-filter-select"
-                value={filterWorkshop}
-                onChange={(e) => setFilterWorkshop(e.target.value)}
-                className="w-full border border-amber-400/30 bg-[#000d1e] rounded-2xl px-4 py-3 focus:ring-2 focus:ring-amber-400 outline-none text-sm text-white transition-all font-medium cursor-pointer"
-              >
-                <option value="" className="bg-[#001128] text-white">All 27 Workshops</option>
-                {workshops.map((ws) => (
-                  <option key={ws.id} value={ws.nameEn} className="bg-[#001128] text-white">
-                    {ws.code}: {ws.nameEn}
-                  </option>
-                ))}
-              </select>
+              {isWorkshopUser ? (
+                <div className="w-full border border-amber-400/50 bg-gradient-to-r from-amber-500/20 via-[#001738] to-[#000d1e] rounded-2xl px-4 py-3 text-sm text-amber-200 font-bold flex items-center justify-between shadow-inner">
+                  <span className="flex items-center gap-2 truncate">
+                    <span className="px-2 py-0.5 bg-amber-400 text-[#001733] font-mono text-xs rounded font-black">
+                      {authSession?.workshopCode}
+                    </span>
+                    <span className="truncate text-white">{authSession?.workshopNameEn} ({authSession?.workshopNameBn})</span>
+                  </span>
+                  <span className="text-[10px] font-mono font-black text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded border border-amber-400/40 uppercase shrink-0">
+                    🔒 LOCKED
+                  </span>
+                </div>
+              ) : (
+                <select
+                  id="workshop-filter-select"
+                  value={filterWorkshop}
+                  onChange={(e) => setFilterWorkshop(e.target.value)}
+                  className="w-full border border-amber-400/30 bg-[#000d1e] rounded-2xl px-4 py-3 focus:ring-2 focus:ring-amber-400 outline-none text-sm text-white transition-all font-medium cursor-pointer"
+                >
+                  <option value="" className="bg-[#001128] text-white">All 27 Workshops</option>
+                  {workshops.map((ws) => (
+                    <option key={ws.id} value={ws.nameEn} className="bg-[#001128] text-white">
+                      {ws.code}: {ws.nameEn}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Ship Selection Dropdown */}
@@ -338,7 +374,7 @@ export default function DefectFind({
                     <td className="p-3 text-cyan-200 whitespace-nowrap">{defect.location}</td>
                     <td className="p-3 text-amber-300/90 whitespace-nowrap">{defect.workshop || defect.workshopCode || 'WS-01'}</td>
                     <td className="p-3 font-mono text-slate-300 whitespace-nowrap">{defect.defectDate}</td>
-                    <td className="p-3 text-slate-200 max-w-xs truncate">{defect.defectDescription}</td>
+                    <td className="p-3 text-slate-200 min-w-[200px] max-w-md break-words">{defect.defectDescription}</td>
                     <td className="p-3 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         {defect.defectImage && (
