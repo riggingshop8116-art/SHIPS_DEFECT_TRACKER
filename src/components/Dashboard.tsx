@@ -101,7 +101,7 @@ export default function Dashboard({
           )}
 
           <div className="text-[11px] font-algerian font-bold uppercase text-amber-200 bg-[#00142e]/90 border border-amber-500/30 px-3.5 py-2 rounded-xl hidden md:flex items-center gap-2 shadow-md">
-            <img src="/anchor.jpg" alt="Navy Crest" className="w-4 h-4 rounded-full object-contain bg-black" />
+            <img src="/asd_navy_logo.jpg" alt="ASD Navy Crest" className="w-4 h-4 rounded-full object-contain bg-black" referrerPolicy="no-referrer" />
             <span>STATUS: <span className="text-emerald-400">ONLINE</span> // 27 WORKSHOPS ACTIVE</span>
           </div>
         </div>

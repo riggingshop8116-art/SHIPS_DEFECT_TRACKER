@@ -104,7 +104,7 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
     setIsDropdownOpen(false);
     setWorkshopSearchQuery('');
     setWorkshopError('');
-    setUsername(ws.username || `oic.${ws.code.toLowerCase().replace(/[^a-z0-9]/g, '')}`);
+    setUsername('');
     setPassword('');
   };
 
@@ -116,7 +116,7 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
 
     setTimeout(() => {
       setIsWorkshopSubmitting(false);
-      const inputUser = username.trim().toLowerCase();
+      const inputUser = username.trim();
       const inputPass = password.trim();
 
       if (!inputUser) {
@@ -128,26 +128,26 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
         return;
       }
 
-      // Check if input matches selected workshop first
+      // Check if input matches selected workshop first (Strict Case Sensitive)
       let targetWs = workshops.find(ws => 
         ws.id === selectedWorkshopId && (
-          (ws.username && ws.username.trim().toLowerCase() === inputUser) ||
-          ws.code.trim().toLowerCase() === inputUser ||
+          (ws.username && ws.username.trim() === inputUser) ||
+          ws.code.trim() === inputUser ||
           `oic.${ws.code.toLowerCase().replace(/[^a-z0-9]/g, '')}` === inputUser
         )
       );
 
-      // If not matching selected workshop, search any workshop in the system
+      // If not matching selected workshop, search any workshop in the system (Strict Case Sensitive)
       if (!targetWs) {
         targetWs = workshops.find(ws => 
-          (ws.username && ws.username.trim().toLowerCase() === inputUser) ||
-          ws.code.trim().toLowerCase() === inputUser ||
+          (ws.username && ws.username.trim() === inputUser) ||
+          ws.code.trim() === inputUser ||
           `oic.${ws.code.toLowerCase().replace(/[^a-z0-9]/g, '')}` === inputUser
         );
       }
 
       if (!targetWs) {
-        setWorkshopError('❌ ইউজার আইডি পাওয়া যায়নি! এডমিন প্যানেলে নির্ধারিত সঠিক শপ ইউজার আইডি দিন।');
+        setWorkshopError('❌ ইউজার আইডি পাওয়া যায়নি! বড় ও ছোট হাতের অক্ষর (Case-sensitive) যাচাই করে সঠিক শপ ইউজার আইডি দিন।');
         return;
       }
 
@@ -158,7 +158,7 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
 
       const expectedPassword = targetWs.password ? targetWs.password.trim() : '123456';
       if (inputPass !== expectedPassword) {
-        setWorkshopError(`❌ পাসওয়ার্ড ভুল হয়েছে! ${targetWs.code} এর জন্য এডমিন প্যানেলে নির্ধারিত সঠিক পাসওয়ার্ড প্রদান করুন।`);
+        setWorkshopError(`❌ পাসওয়ার্ড ভুল হয়েছে! বড় ও ছোট হাতের অক্ষর (Case-sensitive) মিলিয়ে ${targetWs.code} এর জন্য এডমিন প্যানেলে নির্ধারিত সঠিক পাসওয়ার্ড দিন।`);
         return;
       }
 
@@ -186,7 +186,7 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
 
     setTimeout(() => {
       setIsAdminSubmitting(false);
-      const inputAdminUser = adminUsername.trim().toLowerCase();
+      const inputAdminUser = adminUsername.trim();
       const inputAdminPass = adminPassword.trim();
 
       if (!inputAdminUser) {
@@ -198,19 +198,19 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
         return;
       }
 
-      const expectedAdminId = (profile?.officialId || 'admin').trim().toLowerCase();
+      const expectedAdminId = (profile?.officialId || 'admin').trim();
       const expectedAdminPass = (profile?.password || 'admin123').trim();
 
-      const isIdValid = inputAdminUser === expectedAdminId || (expectedAdminId === 'admin' && inputAdminUser === 'admin');
+      const isIdValid = inputAdminUser === expectedAdminId;
       const isPassValid = inputAdminPass === expectedAdminPass;
 
       if (!isIdValid) {
-        setAdminError('❌ ভুল এডমিন ইউজার আইডি! এডমিন প্যানেল প্রোফাইলে নির্ধারিত সঠিক আইডি দিন।');
+        setAdminError('❌ ভুল এডমিন ইউজার আইডি! বড় ও ছোট হাতের অক্ষর (Case-sensitive) মিলিয়ে সঠিক আইডি দিন।');
         return;
       }
 
       if (!isPassValid) {
-        setAdminError('❌ ভুল এডমিন পাসওয়ার্ড! এডমিন প্যানেলে নির্ধারিত সঠিক পাসওয়ার্ড প্রদান করুন।');
+        setAdminError('❌ ভুল এডমিন পাসওয়ার্ড! বড় ও ছোট হাতের অক্ষর (Case-sensitive) মিলিয়ে সঠিক পাসওয়ার্ড প্রদান করুন।');
         return;
       }
 

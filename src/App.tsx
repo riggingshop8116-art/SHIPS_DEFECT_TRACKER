@@ -94,7 +94,14 @@ export default function App() {
   const [dockyardConfig, setDockyardConfig] = useState<DockyardConfig>(() => {
     try {
       const stored = localStorage.getItem('defect_tracker_dockyard_config');
-      return stored ? JSON.parse(stored) : DEFAULT_DOCKYARD_CONFIG;
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (!parsed.headerLogoUrl || parsed.headerLogoUrl === '/anchor.jpg') {
+          parsed.headerLogoUrl = '/asd_navy_logo.jpg';
+        }
+        return parsed;
+      }
+      return DEFAULT_DOCKYARD_CONFIG;
     } catch (e) {
       return DEFAULT_DOCKYARD_CONFIG;
     }
@@ -753,9 +760,10 @@ export default function App() {
 
                 <div className="w-9 h-9 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full p-0.5 sm:p-1 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-600 border-2 border-amber-300 shadow-xl flex items-center justify-center shrink-0 overflow-hidden bg-white">
                   <img 
-                    src="/anchor.jpg" 
-                    alt="Bangladesh Navy Crest" 
+                    src={dockyardConfig.headerLogoUrl || '/asd_navy_logo.jpg'} 
+                    alt="Bangladesh Navy ASD Crest" 
                     className="w-full h-full object-cover rounded-full" 
+                    referrerPolicy="no-referrer"
                   />
                 </div>
 
@@ -812,9 +820,10 @@ export default function App() {
 
                 <div className="w-9 h-9 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-full p-0.5 sm:p-1 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-600 border-2 border-amber-300 shadow-xl flex items-center justify-center shrink-0 overflow-hidden bg-white">
                   <img 
-                    src="/anchor.jpg" 
-                    alt="Bangladesh Navy Crest" 
+                    src={dockyardConfig.headerLogoUrl || '/asd_navy_logo.jpg'} 
+                    alt="Bangladesh Navy ASD Crest" 
                     className="w-full h-full object-cover rounded-full" 
+                    referrerPolicy="no-referrer"
                   />
                 </div>
 
@@ -855,9 +864,10 @@ export default function App() {
           <div className="bg-[#000d1e] border-b-2 border-slate-400/25 overflow-hidden py-1.5 px-4 flex items-center shadow-md z-10">
             <div className="flex items-center gap-2 bg-gradient-to-r from-amber-500/30 to-amber-600/30 border border-amber-400/50 px-3 py-1 rounded-xl text-amber-300 font-algerian font-bold text-xs shrink-0 z-10 shadow-md">
               <img 
-                src={dockyardConfig.headerLogoUrl || '/asd_monogram.jpg'} 
+                src={dockyardConfig.headerLogoUrl || '/asd_navy_logo.jpg'} 
                 alt="Navy Crest" 
                 className="w-5 h-5 object-contain rounded-full bg-white p-0.5" 
+                referrerPolicy="no-referrer"
               />
               <span className="tracking-wider">{dockyardConfig.marqueeBadge || 'COMMAND DISPATCH'}</span>
             </div>

@@ -3,7 +3,7 @@ import { UserProfile, Workshop, DockyardConfig } from './types';
 export const DEFAULT_DOCKYARD_CONFIG: DockyardConfig = {
   headerTitle: 'AREA SUPERINTENDENT DOCKYARD',
   headerSubtitle: 'BANGLADESH NAVY',
-  headerLogoUrl: '/asd_monogram.jpg',
+  headerLogoUrl: '/asd_navy_logo.jpg',
   yardNameBn: 'বাংলাদেশ নৌবাহিনী ডকইয়ার্ড',
   yardNameEn: 'AREA SUPERINTENDENT DOCKYARD',
   yardMotto: 'In Peace, In War, Invincible at Sea',

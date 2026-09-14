@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Building2, 
   Ship, 
@@ -513,6 +514,17 @@ export default function AdminPanel({
     };
     reader.readAsText(file);
   };
+
+  // Lock body scroll when modal is open so the user stays focused on dialog
+  useEffect(() => {
+    if (editingWorkshopUser || isAddingUserModal) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [editingWorkshopUser, isAddingUserModal]);
 
   return (
     <div id="admin-panel-root" className="space-y-6 max-w-7xl mx-auto">
@@ -1100,22 +1112,22 @@ export default function AdminPanel({
                 </label>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* Preset 1: ASD Monogram */}
+                  {/* Preset 1: ASD Navy Crest */}
                   <button
                     type="button"
-                    onClick={() => setLocalConfig({ ...localConfig, headerLogoUrl: '/asd_monogram.jpg' })}
+                    onClick={() => setLocalConfig({ ...localConfig, headerLogoUrl: '/asd_navy_logo.jpg' })}
                     className={`p-3 rounded-xl border flex items-center gap-3 text-left transition-all cursor-pointer ${
-                      (localConfig.headerLogoUrl === '/asd_monogram.jpg' || !localConfig.headerLogoUrl)
+                      (localConfig.headerLogoUrl === '/asd_navy_logo.jpg' || localConfig.headerLogoUrl === '/asd_monogram.jpg' || !localConfig.headerLogoUrl)
                         ? 'bg-amber-500/25 border-amber-400 shadow-md ring-1 ring-amber-400/50'
                         : 'bg-[#001738]/60 border-white/10 hover:border-amber-400/40'
                     }`}
                   >
                     <div className="w-10 h-10 rounded-full bg-white p-0.5 border border-amber-300 shrink-0 flex items-center justify-center overflow-hidden">
-                      <img src="/asd_monogram.jpg" alt="ASD Crest" className="w-full h-full object-contain" />
+                      <img src="/asd_navy_logo.jpg" alt="ASD Crest" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-amber-300 font-algerian">ASD Monogram</p>
-                      <p className="text-[10px] text-slate-400">Area Superintendent Crest</p>
+                      <p className="text-xs font-bold text-amber-300 font-algerian">ASD Navy Crest (অফিসিয়াল লগো)</p>
+                      <p className="text-[10px] text-slate-400">Armament Supply Depot / ASD Crest</p>
                     </div>
                   </button>
 
@@ -2345,9 +2357,9 @@ export default function AdminPanel({
       )}
 
       {/* ================= EDIT WORKSHOP USER & CREDENTIALS MODAL ================= */}
-      {editingWorkshopUser && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#001738] border-2 border-amber-500/50 rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-2xl space-y-6 text-white animate-scale-up">
+      {editingWorkshopUser && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#001738] border-2 border-amber-500/50 rounded-3xl p-5 sm:p-7 md:p-8 max-w-xl w-full shadow-2xl space-y-6 text-white animate-scale-up my-auto">
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-amber-400 text-[#001733] rounded-xl font-bold font-mono">
@@ -2523,13 +2535,14 @@ export default function AdminPanel({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ================= ADD NEW WORKSHOP USER MODAL ================= */}
-      {isAddingUserModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#001738] border-2 border-amber-500/50 rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-2xl space-y-6 text-white animate-scale-up">
+      {isAddingUserModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#001738] border-2 border-amber-500/50 rounded-3xl p-5 sm:p-7 md:p-8 max-w-xl w-full shadow-2xl space-y-6 text-white animate-scale-up my-auto">
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-gradient-to-br from-amber-400 to-amber-600 text-[#001733] rounded-xl font-bold font-mono">
@@ -2686,7 +2699,8 @@ export default function AdminPanel({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>
