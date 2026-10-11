@@ -2,12 +2,16 @@ import React, { useState, useMemo, useRef } from 'react';
 import { 
   Search, 
   RefreshCw, 
+  RotateCcw,
+  Loader2,
   Ship, 
   MapPin, 
   Building2, 
   AlertCircle, 
   CheckCircle2, 
-  Calendar 
+  Calendar,
+  X,
+  Anchor
 } from 'lucide-react';
 import { Workshop, Defect, AuthSession } from '../types';
 
@@ -33,6 +37,22 @@ export default function DefectFind({
   const fromDateInputRef = useRef<HTMLInputElement>(null);
   const toDateInputRef = useRef<HTMLInputElement>(null);
 
+  const safeOpenDatePicker = (input: HTMLInputElement | null) => {
+    if (!input) return;
+    try {
+      if (typeof input.showPicker === 'function') {
+        input.showPicker();
+        return;
+      }
+    } catch {
+      // showPicker() can throw SecurityError in cross-origin iframes
+    }
+    input.focus();
+    try {
+      input.click();
+    } catch {}
+  };
+
   const [filterWorkshop, setFilterWorkshop] = useState<string>(
     isWorkshopUser && authSession?.workshopCode ? authSession.workshopCode : ''
   );
@@ -42,10 +62,13 @@ export default function DefectFind({
   const [toDate, setToDate] = useState<string>('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  // Compute filtered defects directly in-page so user stays on Defect Find
-  const filteredResults = useMemo(() => {
+  // Search execution state (records are NOT shown initially until user executes search)
+  const [hasSearched, setHasSearched] = useState<boolean>(false);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [searchedDefects, setSearchedDefects] = useState<Defect[]>([]);
+
+  const executeFilterQuery = (customShip = filterShip, customLoc = filterLocation, customFrom = fromDate, customTo = toDate, customWs = filterWorkshop) => {
     return defects.filter(d => {
-      // Per-shop isolation for workshop user
       if (isWorkshopUser && authSession?.workshopCode) {
         const userWsCode = authSession.workshopCode.toUpperCase();
         const userWsNameEn = (authSession.workshopNameEn || '').toLowerCase();
@@ -58,99 +81,135 @@ export default function DefectFind({
                           (userWsNameBn && d.workshop.includes(userWsNameBn))
                         ));
         if (!matchWs) return false;
-      } else if (filterWorkshop) {
-        const matchWs = (d.workshopCode && d.workshopCode.toLowerCase().includes(filterWorkshop.toLowerCase())) ||
-                        (d.workshop && d.workshop.toLowerCase().includes(filterWorkshop.toLowerCase()));
+      } else if (customWs) {
+        const matchWs = (d.workshopCode && d.workshopCode.toLowerCase().includes(customWs.toLowerCase())) ||
+                        (d.workshop && d.workshop.toLowerCase().includes(customWs.toLowerCase()));
         if (!matchWs) return false;
       }
 
-      if (filterShip && d.shipName !== filterShip) return false;
-      if (filterLocation && d.location !== filterLocation) return false;
-      if (fromDate && d.defectDate < fromDate) return false;
-      if (toDate && d.defectDate > toDate) return false;
+      if (customShip && d.shipName !== customShip) return false;
+      if (customLoc && d.location !== customLoc) return false;
+      if (customFrom && d.defectDate < customFrom) return false;
+      if (customTo && d.defectDate > customTo) return false;
       return true;
     });
-  }, [defects, isWorkshopUser, authSession, filterWorkshop, filterShip, filterLocation, fromDate, toDate]);
+  };
 
   const handleReset = () => {
-    setFilterWorkshop(isWorkshopUser && authSession?.workshopCode ? authSession.workshopCode : '');
+    const defaultWs = isWorkshopUser && authSession?.workshopCode ? authSession.workshopCode : '';
+    setFilterWorkshop(defaultWs);
     setFilterShip('');
     setFilterLocation('');
     setFromDate('');
     setToDate('');
+    setHasSearched(false);
+    setSearchedDefects([]);
     if (onSearchSubmit) {
-      onSearchSubmit('', '', '', '', isWorkshopUser && authSession?.workshopCode ? authSession.workshopCode : '');
+      onSearchSubmit('', '', '', '', defaultWs);
     }
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (onSearchSubmit) {
-      onSearchSubmit(filterShip, filterLocation, fromDate, toDate, filterWorkshop);
-    }
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSearching(true);
+    
+    // Simulate brief reactive fetch from current database state
+    setTimeout(() => {
+      const results = executeFilterQuery();
+      setSearchedDefects(results);
+      setHasSearched(true);
+      setIsSearching(false);
+
+      if (onSearchSubmit) {
+        onSearchSubmit(filterShip, filterLocation, fromDate, toDate, filterWorkshop);
+      }
+    }, 200);
+  };
+
+  const handleShowAll = () => {
+    setIsSearching(true);
+    setTimeout(() => {
+      const results = executeFilterQuery('', '', '', '', isWorkshopUser && authSession?.workshopCode ? authSession.workshopCode : '');
+      setSearchedDefects(results);
+      setHasSearched(true);
+      setIsSearching(false);
+    }, 200);
   };
 
   return (
-    <div id="defect-find-panel" className="w-full max-w-7xl mx-auto space-y-6">
+    <div id="defect-find-panel" className="w-full max-w-7xl mx-auto space-y-6 text-slate-800 pb-8">
       
-      {/* Search Header Banner */}
-      <div className="bg-[#001738]/95 backdrop-blur-xl p-6 sm:p-7 rounded-3xl border-l-8 border-amber-400 border border-amber-500/35 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-2xl">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="px-3 py-0.5 rounded-full text-[10px] font-algerian font-bold bg-amber-500/20 text-amber-300 border border-amber-400/40 uppercase">
-              DEFECT SEARCH ENGINE
+      {/* Search Header Banner - Bangladesh Naval Green (#006A4E) & Cream (#FFFDD0) Design */}
+      <div className="bg-gradient-to-r from-[#006A4E] via-[#355E3B] to-[#006A4E] text-[#FFFDD0] border-2 border-[#FFFDD0]/60 p-5 sm:p-6 rounded-2xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
+        {/* Decorative naval anchor watermark */}
+        <div className="absolute right-3 -bottom-6 opacity-10 pointer-events-none text-[#FFFDD0]">
+          <Anchor className="h-44 w-44" />
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <span className="px-3 py-1 rounded-md text-[11px] font-bold bg-[#FFFDD0] text-[#006A4E] font-mono tracking-wider shadow-xs flex items-center gap-1.5">
+              <span>⚓ DEFECT SEARCH ENGINE</span>
             </span>
-            <span className="text-amber-400 text-xs">•</span>
-            <span className="text-xs text-amber-200/90 font-mono">BND QUERY FILTER</span>
+            <span className="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#004d38]/80 text-[#FFFDD0] border border-[#FFFDD0]/40 font-mono shadow-xs">
+              BND QUERY FILTER
+            </span>
           </div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-algerian font-extrabold flex items-center gap-3 text-white uppercase tracking-wider">
-            <Search className="h-6 w-6 text-amber-400" />
-            <span>DEFECT FIND & QUERY SYSTEM</span>
+
+          <h2 className="text-xl sm:text-2xl font-black font-algerian flex items-center gap-2.5 text-[#FFFDD0] tracking-wider">
+            <div className="p-2 rounded-xl bg-[#FFFDD0] text-[#006A4E] shadow-xs">
+              <Search className="h-5 w-5 text-[#006A4E]" />
+            </div>
+            <span>ডিফেক্ট সার্চ ও অনুসন্ধান • DEFECT QUERY SYSTEM</span>
           </h2>
-          <p className="text-slate-200 text-xs sm:text-sm mt-1">
-            Filter defects by workshop, warship name, compartment location, or date range. Results display directly below.
+
+          <p className="text-[#FFFDD0]/90 text-xs sm:text-sm mt-1.5 max-w-2xl leading-relaxed font-medium">
+            ওয়ার্কশপ, যুদ্ধজাহাজের নাম, কম্পার্টমেন্ট বা তারিখ অনুযায়ী পূর্বে সংরক্ষিত সকল ডিফেক্ট দ্রুত খুঁজে বের করুন।
           </p>
         </div>
 
         <button
           type="button"
           onClick={handleReset}
-          className="bg-white/10 hover:bg-white/20 text-amber-200 border border-amber-400/40 font-algerian font-bold px-5 py-2.5 rounded-2xl text-xs flex items-center gap-2 transition-all cursor-pointer shadow-lg active:scale-95 shrink-0"
+          className="bg-[#FFFDD0] hover:bg-[#F3EFBA] text-[#006A4E] border-2 border-[#FFFDD0] font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0 relative z-10 shadow-xs active:scale-95"
         >
-          <RefreshCw className="h-4 w-4 text-amber-400" />
-          <span>RESET FILTERS</span>
+          <RefreshCw className="h-3.5 w-3.5 text-[#006A4E]" />
+          <span>রিসেট ফিল্টার • Reset Filters</span>
         </button>
       </div>
 
-      {/* Full-width Search Filter Form (ACTIVE SEARCH SCOPE and PROTOCOL GUIDELINES removed) */}
+      {/* Filter Form Card - Bangladesh Naval Green (#006A4E) & Cream Theme */}
       <div className="w-full">
-        <form onSubmit={handleSearchSubmit} className="bg-[#001738]/95 backdrop-blur-xl p-6 sm:p-8 rounded-3xl shadow-2xl border border-amber-500/35 space-y-6 text-white">
+        <form onSubmit={handleSearchSubmit} className="bg-white/95 border-2 border-[#006A4E]/30 hover:border-[#006A4E]/70 p-6 sm:p-8 rounded-2xl shadow-sm space-y-5 text-[#1B331F] transition-all">
           
-          <div className="border-b border-white/10 pb-3 flex items-center justify-between">
-            <h3 className="text-amber-400 font-algerian font-bold text-sm uppercase flex items-center gap-2 tracking-wide">
-              <Search className="h-4 w-4 text-amber-400" />
-              <span>SEARCH CRITERIA & QUERY PARAMETERS</span>
+          <div className="border-b-2 border-[#006A4E]/20 pb-3 flex items-center justify-between">
+            <h3 className="text-[#006A4E] font-bold text-xs uppercase flex items-center gap-1.5 tracking-wide">
+              <Search className="h-3.5 w-3.5 text-[#006A4E]" />
+              <span>Search Criteria & Query Parameters</span>
             </h3>
-            <span className="text-[11px] text-amber-200/80 font-mono">MATCHING: {filteredResults.length} RECORDS</span>
+            <span className="text-xs text-[#006A4E] font-mono font-semibold">
+              {hasSearched ? `Found: ${searchedDefects.length} records` : `Total in DB: ${defects.length}`}
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            
             {/* Workshop Selection */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-algerian font-bold text-amber-300 mb-1 flex items-center gap-1.5 uppercase">
-                <Building2 className="h-3.5 w-3.5 text-amber-400" />
-                <span>{isWorkshopUser ? 'ASSIGNED SHOP (আপনার শপ)' : 'WORKSHOP'}</span>
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-700 uppercase flex items-center gap-1.5">
+                <Building2 className="h-3.5 w-3.5 text-slate-500" />
+                <span>{isWorkshopUser ? 'ASSIGNED SHOP' : 'WORKSHOP'}</span>
               </label>
               {isWorkshopUser ? (
-                <div className="w-full border border-amber-400/50 bg-gradient-to-r from-amber-500/20 via-[#001738] to-[#000d1e] rounded-2xl px-4 py-3 text-sm text-amber-200 font-bold flex items-center justify-between shadow-inner">
-                  <span className="flex items-center gap-2 truncate">
-                    <span className="px-2 py-0.5 bg-amber-400 text-[#001733] font-mono text-xs rounded font-black">
+                <div className="w-full border border-slate-300 bg-slate-50 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-medium flex items-center justify-between">
+                  <span className="truncate">
+                    <span className="px-1.5 py-0.5 bg-slate-200 text-slate-800 font-mono text-[10px] rounded font-bold mr-2">
                       {authSession?.workshopCode}
                     </span>
-                    <span className="truncate text-white">{authSession?.workshopNameEn} ({authSession?.workshopNameBn})</span>
+                    {authSession?.workshopNameEn}
                   </span>
-                  <span className="text-[10px] font-mono font-black text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded border border-amber-400/40 uppercase shrink-0">
-                    🔒 LOCKED
+                  <span className="text-[10px] font-mono font-semibold text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded">
+                    LOCKED
                   </span>
                 </div>
               ) : (
@@ -158,11 +217,11 @@ export default function DefectFind({
                   id="workshop-filter-select"
                   value={filterWorkshop}
                   onChange={(e) => setFilterWorkshop(e.target.value)}
-                  className="w-full border border-amber-400/30 bg-[#000d1e] rounded-2xl px-4 py-3 focus:ring-2 focus:ring-amber-400 outline-none text-sm text-white transition-all font-medium cursor-pointer"
+                  className="w-full border border-slate-300 bg-white rounded-xl px-3.5 py-2.5 focus:border-slate-500 outline-none text-xs text-slate-800 cursor-pointer"
                 >
-                  <option value="" className="bg-[#001128] text-white">All 27 Workshops</option>
+                  <option value="">All Workshops ({workshops.length})</option>
                   {workshops.map((ws) => (
-                    <option key={ws.id} value={ws.nameEn} className="bg-[#001128] text-white">
+                    <option key={ws.id} value={ws.nameEn}>
                       {ws.code}: {ws.nameEn}
                     </option>
                   ))}
@@ -170,261 +229,284 @@ export default function DefectFind({
               )}
             </div>
 
-            {/* Ship Selection Dropdown */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-algerian font-bold text-amber-300 mb-1 flex items-center gap-1.5 uppercase">
-                <Ship className="h-3.5 w-3.5 text-cyan-400" />
+            {/* Warship Selection Dropdown */}
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-700 uppercase flex items-center gap-1.5">
+                <Ship className="h-3.5 w-3.5 text-slate-500" />
                 <span>WARSHIP NAME</span>
               </label>
               <select
                 id="ship-filter-select"
                 value={filterShip}
                 onChange={(e) => setFilterShip(e.target.value)}
-                className="w-full border border-amber-400/30 bg-[#000d1e] rounded-2xl px-4 py-3 focus:ring-2 focus:ring-amber-400 outline-none text-sm text-white transition-all cursor-pointer"
+                className="w-full border border-slate-300 bg-white rounded-xl px-3.5 py-2.5 focus:border-slate-500 outline-none text-xs text-slate-800 cursor-pointer"
               >
-                <option value="" className="bg-[#001128] text-white">All Warships</option>
+                <option value="">All Warships ({ships.length})</option>
                 {ships.map((ship, idx) => (
-                  <option key={idx} value={ship} className="bg-[#001128] text-white">{ship}</option>
+                  <option key={idx} value={ship}>{ship}</option>
                 ))}
               </select>
             </div>
 
-            {/* Location Dropdown */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-algerian font-bold text-amber-300 mb-1 flex items-center gap-1.5 uppercase">
-                <MapPin className="h-3.5 w-3.5 text-amber-400" />
-                <span>DEFECT LOCATION</span>
+            {/* Compartment Selection Dropdown */}
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-700 uppercase flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-slate-500" />
+                <span>COMPARTMENT LOCATION</span>
               </label>
               <select
                 id="location-filter-select"
                 value={filterLocation}
                 onChange={(e) => setFilterLocation(e.target.value)}
-                className="w-full border border-amber-400/30 bg-[#000d1e] rounded-2xl px-4 py-3 focus:ring-2 focus:ring-amber-400 outline-none text-sm text-white transition-all cursor-pointer"
+                className="w-full border border-slate-300 bg-white rounded-xl px-3.5 py-2.5 focus:border-slate-500 outline-none text-xs text-slate-800 cursor-pointer"
               >
-                <option value="" className="bg-[#001128] text-white">All Compartments & Locations</option>
+                <option value="">All Compartments ({locations.length})</option>
                 {locations.map((loc, idx) => (
-                  <option key={idx} value={loc} className="bg-[#001128] text-white">{loc}</option>
+                  <option key={idx} value={loc}>{loc}</option>
                 ))}
               </select>
             </div>
+
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Date From */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-algerian font-bold text-amber-300 mb-1 uppercase">
-                DEFECT DATE (FROM)
+          {/* Date Range Selection */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1">
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-700 uppercase flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                <span>FROM DEFECT DATE</span>
               </label>
-              <div className="relative flex items-center">
+              <div className="relative">
                 <input
                   ref={fromDateInputRef}
                   type="date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
-                  className="w-full border border-amber-400/30 bg-[#000d1e] rounded-2xl px-4 py-3 pr-12 text-sm text-white focus:ring-2 focus:ring-amber-400 outline-none cursor-pointer"
+                  onClick={(e) => {
+                    try {
+                      e.currentTarget.showPicker?.();
+                    } catch {}
+                  }}
+                  className="w-full border border-slate-300 bg-white rounded-xl pl-3.5 pr-10 py-2.5 focus:border-[#006A4E] outline-none text-xs text-slate-800 cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 hover:[&::-webkit-calendar-picker-indicator]:opacity-100"
                 />
                 <button
                   type="button"
-                  onClick={() => {
-                    try {
-                      fromDateInputRef.current?.showPicker();
-                    } catch {
-                      fromDateInputRef.current?.focus();
-                    }
-                  }}
-                  className="absolute right-3.5 p-1 text-amber-400 hover:text-amber-200 transition-colors cursor-pointer"
-                  title="Open Calendar"
+                  onClick={() => safeOpenDatePicker(fromDateInputRef.current)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-[#006A4E] cursor-pointer transition-colors"
+                  title="ক্যালেন্ডার ওপেন করুন"
                 >
-                  <Calendar className="h-5 w-5" />
+                  <Calendar className="h-4 w-4" />
                 </button>
               </div>
             </div>
 
-            {/* Date To */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-algerian font-bold text-amber-300 mb-1 uppercase">
-                DEFECT DATE (TO)
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-700 uppercase flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                <span>TO DEFECT DATE</span>
               </label>
-              <div className="relative flex items-center">
+              <div className="relative">
                 <input
                   ref={toDateInputRef}
                   type="date"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
-                  className="w-full border border-amber-400/30 bg-[#000d1e] rounded-2xl px-4 py-3 pr-12 text-sm text-white focus:ring-2 focus:ring-amber-400 outline-none cursor-pointer"
+                  onClick={(e) => {
+                    try {
+                      e.currentTarget.showPicker?.();
+                    } catch {}
+                  }}
+                  className="w-full border border-slate-300 bg-white rounded-xl pl-3.5 pr-10 py-2.5 focus:border-[#006A4E] outline-none text-xs text-slate-800 cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 hover:[&::-webkit-calendar-picker-indicator]:opacity-100"
                 />
                 <button
                   type="button"
-                  onClick={() => {
-                    try {
-                      toDateInputRef.current?.showPicker();
-                    } catch {
-                      toDateInputRef.current?.focus();
-                    }
-                  }}
-                  className="absolute right-3.5 p-1 text-amber-400 hover:text-amber-200 transition-colors cursor-pointer"
-                  title="Open Calendar"
+                  onClick={() => safeOpenDatePicker(toDateInputRef.current)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-[#006A4E] cursor-pointer transition-colors"
+                  title="ক্যালেন্ডার ওপেন করুন"
                 >
-                  <Calendar className="h-5 w-5" />
+                  <Calendar className="h-4 w-4" />
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Tactical Quick Presets */}
-          <div className="pt-2">
-            <span className="text-[11px] font-algerian text-amber-300 font-bold block mb-2 uppercase">
-              QUICK SEARCH PRESETS:
-            </span>
-            <div className="flex flex-wrap gap-2.5">
-              <button
-                type="button"
-                onClick={() => setFilterLocation(locations[0] || 'Main Engine')}
-                className="text-xs px-4 py-2 rounded-xl bg-[#000e24] hover:bg-[#001c40] border border-amber-400/30 text-slate-200 hover:text-amber-300 font-algerian transition-all cursor-pointer shadow-xs"
-              >
-                MAIN ENGINE DEFECTS
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const ws = workshops.find(w => w.category === 'Electrical' || w.category === 'ইলেকট্রিক্যাল')?.nameEn || '';
-                  setFilterWorkshop(ws);
-                }}
-                className="text-xs px-4 py-2 rounded-xl bg-[#000e24] hover:bg-[#001c40] border border-amber-400/30 text-slate-200 hover:text-amber-300 font-algerian transition-all cursor-pointer shadow-xs"
-              >
-                ELECTRICAL WORKSHOPS
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterShip(ships[0] || '')}
-                className="text-xs px-4 py-2 rounded-xl bg-[#000e24] hover:bg-[#001c40] border border-amber-400/30 text-slate-200 hover:text-amber-300 font-algerian transition-all cursor-pointer shadow-xs"
-              >
-                {ships[0] || 'BNS Bangabandhu'} DEFECTS
-              </button>
-            </div>
-          </div>
-
-          {/* Action Button: Filters in-place, does NOT redirect to Dashboard */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-white/10">
-            <div className="text-xs text-amber-200/90 font-mono flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>RESULTS DISPLAY IN REAL-TIME BELOW</span>
+          {/* Action Button: Filters in-place */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-200">
+            <div className="text-xs text-slate-500 font-mono flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>ডাটাবেজ থেকে নির্দিষ্ট ডিফেক্ট রেকর্ড অনুসন্ধান করুন</span>
             </div>
 
-            <button
-              id="find-defect-submit-btn"
-              type="submit"
-              className="w-full sm:w-auto bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#001733] font-algerian font-black py-3.5 px-14 rounded-2xl shadow-xl shadow-amber-500/25 flex items-center justify-center gap-2.5 cursor-pointer transition-all active:scale-95 text-sm sm:text-base uppercase tracking-wider"
-            >
-              <Search className="h-5 w-5 text-[#001733]" />
-              <span>DEFECT FIND</span>
-            </button>
+            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={handleReset}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>রিসেট (Reset)</span>
+              </button>
+
+              <button
+                id="find-defect-submit-btn"
+                type="submit"
+                disabled={isSearching}
+                className="flex-1 sm:flex-none bg-gradient-to-r from-[#006A4E] to-[#004e39] hover:from-[#005740] hover:to-[#00402e] text-[#FFFDD0] font-bold border-2 border-[#FFFDD0]/60 py-2.5 px-6 rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 text-xs font-algerian uppercase tracking-wider disabled:opacity-50"
+              >
+                {isSearching ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-[#FFFDD0]" />
+                ) : (
+                  <Search className="h-4 w-4 text-[#FFFDD0]" />
+                )}
+                <span>{isSearching ? 'অনুসন্ধান হচ্ছে...' : 'সার্চ করুন (Search Defects)'}</span>
+              </button>
+            </div>
           </div>
 
         </form>
       </div>
 
-      {/* FILTERED RESULTS TABLE DIRECTLY IN DEFECT FIND */}
-      <div className="bg-[#001738]/95 backdrop-blur-xl p-6 sm:p-8 rounded-3xl shadow-2xl border border-amber-500/35 text-white space-y-4">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
-          <h3 className="text-lg font-algerian font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <span>FILTERED DEFECT RECORDS ({filteredResults.length})</span>
-          </h3>
-          <span className="text-xs text-amber-300 font-mono">
-            {filteredResults.filter(d => d.status === 'Solved').length} Solved • {filteredResults.filter(d => d.status === 'Pending').length} Pending
-          </span>
+      {/* Defect Records Results Section - Only shows after user searches */}
+      {!hasSearched ? (
+        <div className="bg-white/95 border-2 border-[#006A4E]/30 rounded-2xl p-8 sm:p-12 text-center shadow-sm">
+          <div className="max-w-md mx-auto space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-[#006A4E]/10 border-2 border-[#006A4E]/30 flex items-center justify-center mx-auto text-[#006A4E] shadow-inner">
+              <Search className="h-8 w-8" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-800 font-algerian">
+                DATABASE DEFECT RECORD QUERY
+              </h3>
+              <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                ডিফেক্ট রেকর্ড ডাটাবেজে জমা রয়েছে। জাহাজ, লোকেশন, ওয়ার্কশপ বা নির্দিষ্ট তারিখ নির্বাচন করে উপরের <strong className="text-[#006A4E]">"সার্চ করুন (Search Defects)"</strong> বোতামে চাপুন।
+              </p>
+            </div>
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={handleShowAll}
+                className="px-5 py-2.5 bg-gradient-to-r from-[#006A4E] to-[#004e39] hover:from-[#005740] hover:to-[#00402e] text-[#FFFDD0] rounded-xl text-xs font-bold border-2 border-[#FFFDD0]/60 shadow-sm flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+              >
+                <Search className="h-3.5 w-3.5" />
+                <span>সকল ডিফেক্ট রেকর্ড প্রদর্শন করুন (View All {defects.length})</span>
+              </button>
+            </div>
+          </div>
         </div>
+      ) : (
+        /* Filtered Results Table */
+        <div className="bg-white/95 border-2 border-[#006A4E]/30 hover:border-[#006A4E]/70 p-5 sm:p-6 rounded-2xl shadow-sm text-[#1B331F] space-y-4 transition-all animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-[#006A4E]/20 pb-3">
+            <div>
+              <h3 className="text-sm font-bold text-[#006A4E] uppercase tracking-wide flex items-center gap-2 font-algerian">
+                <span>অনুসন্ধান ফলাফল (Found: {searchedDefects.length})</span>
+              </h3>
+              <span className="text-xs text-[#006A4E] font-mono font-semibold">
+                {searchedDefects.filter(d => d.status === 'Solved').length} Solved • {searchedDefects.filter(d => d.status === 'Pending').length} Pending
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors self-start sm:self-auto"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>নতুন সার্চ / রিসেট</span>
+            </button>
+          </div>
 
-        {filteredResults.length === 0 ? (
-          <div className="p-10 text-center text-slate-400 space-y-2">
-            <p className="text-base font-semibold">No defects found matching the selected query parameters.</p>
-            <p className="text-xs">Adjust your search criteria or click "Reset Filters" above.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-white/15 text-amber-300 font-algerian uppercase text-[11px] bg-black/30">
-                  <th className="p-3">Status</th>
-                  <th className="p-3">Ship Name</th>
-                  <th className="p-3">Location</th>
-                  <th className="p-3">Workshop</th>
-                  <th className="p-3">Defect Date</th>
-                  <th className="p-3">Defect Description</th>
-                  <th className="p-3">Photos</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10 font-medium">
-                {filteredResults.map((defect) => (
-                  <tr key={defect.id} className="hover:bg-white/5 transition-colors">
-                    <td className="p-3">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                        defect.status === 'Solved' 
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                          : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                      }`}>
-                        {defect.status === 'Solved' ? (
-                          <><CheckCircle2 className="h-3 w-3" /> Solved</>
-                        ) : (
-                          <><AlertCircle className="h-3 w-3" /> Pending</>
-                        )}
-                      </span>
-                    </td>
-                    <td className="p-3 font-bold text-white whitespace-nowrap">{defect.shipName}</td>
-                    <td className="p-3 text-cyan-200 whitespace-nowrap">{defect.location}</td>
-                    <td className="p-3 text-amber-300/90 whitespace-nowrap">{defect.workshop || defect.workshopCode || 'WS-01'}</td>
-                    <td className="p-3 font-mono text-slate-300 whitespace-nowrap">{defect.defectDate}</td>
-                    <td className="p-3 text-slate-200 min-w-[200px] max-w-md break-words">{defect.defectDescription}</td>
-                    <td className="p-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {defect.defectImage && (
-                          <button 
-                            type="button"
-                            onClick={() => setSelectedImage(defect.defectImage)}
-                            className="w-7 h-7 rounded-lg overflow-hidden border border-rose-400/40 hover:scale-110 transition-transform cursor-pointer"
-                            title="View Defect Photo"
-                          >
-                            <img src={defect.defectImage} alt="Defect" className="w-full h-full object-cover" />
-                          </button>
-                        )}
-                        {defect.solutionImage && (
-                          <button 
-                            type="button"
-                            onClick={() => setSelectedImage(defect.solutionImage)}
-                            className="w-7 h-7 rounded-lg overflow-hidden border border-emerald-400/40 hover:scale-110 transition-transform cursor-pointer"
-                            title="View Solution Photo"
-                          >
-                            <img src={defect.solutionImage} alt="Solution" className="w-full h-full object-cover" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          {searchedDefects.length === 0 ? (
+            <div className="p-10 text-center text-slate-400 space-y-2">
+              <AlertCircle className="h-8 w-8 text-amber-500 mx-auto" />
+              <p className="text-sm font-bold text-slate-700">নির্বাচিত তথ্যের সাথে কোনো ডিফেক্ট রেকর্ড মেলেনি।</p>
+              <p className="text-xs text-slate-500">অনুগ্রহ করে ফিল্টার পরিবর্তন করে আবার চেষ্টা করুন অথবা উপরের "রিসেট" বাটনে ক্লিক করুন।</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-[#006A4E]/30">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-[#FFFDD0]/60 bg-[#006A4E] text-[#FFFDD0] uppercase text-[11px] font-algerian tracking-wider">
+                    <th className="p-3.5 font-bold">Status</th>
+                    <th className="p-3.5 font-bold">Ship Name</th>
+                    <th className="p-3.5 font-bold">Location</th>
+                    <th className="p-3.5 font-bold">Workshop</th>
+                    <th className="p-3.5 font-bold">Defect Date</th>
+                    <th className="p-3.5 font-bold">Defect Description</th>
+                    <th className="p-3.5 font-bold">Photos</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {searchedDefects.map((defect) => (
+                    <tr key={defect.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase ${
+                          defect.status === 'Solved' 
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200'
+                        }`}>
+                          {defect.status === 'Solved' ? (
+                            <><CheckCircle2 className="h-3 w-3" /> Solved</>
+                          ) : (
+                            <><AlertCircle className="h-3 w-3" /> Pending</>
+                          )}
+                        </span>
+                      </td>
+                      <td className="p-3 font-semibold text-slate-900 whitespace-nowrap">{defect.shipName}</td>
+                      <td className="p-3 text-slate-600 whitespace-nowrap">{defect.location}</td>
+                      <td className="p-3 text-slate-600 whitespace-nowrap">{defect.workshop || defect.workshopCode || 'WS-01'}</td>
+                      <td className="p-3 font-mono text-slate-500 whitespace-nowrap">{defect.defectDate}</td>
+                      <td className="p-3 text-slate-700 min-w-[200px] max-w-md break-words">{defect.defectDescription}</td>
+                      <td className="p-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          {defect.defectImage && (
+                            <button 
+                              type="button"
+                              onClick={() => setSelectedImage(defect.defectImage)}
+                              className="w-7 h-7 rounded-md overflow-hidden border border-slate-300 hover:border-slate-500 transition-colors cursor-pointer"
+                              title="View Defect Photo"
+                            >
+                              <img src={defect.defectImage} alt="Defect" className="w-full h-full object-cover" />
+                            </button>
+                          )}
+                          {defect.solutionImage && (
+                            <button 
+                              type="button"
+                              onClick={() => setSelectedImage(defect.solutionImage)}
+                              className="w-7 h-7 rounded-md overflow-hidden border border-emerald-300 hover:border-emerald-500 transition-colors cursor-pointer"
+                              title="View Solution Photo"
+                            >
+                              <img src={defect.solutionImage} alt="Solution" className="w-full h-full object-cover" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Image Lightbox Modal */}
       {selectedImage && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xs animate-fade-in cursor-pointer"
           onClick={() => setSelectedImage(null)}
         >
-          <div className="relative max-w-3xl max-h-[85vh] bg-[#001738] p-2 rounded-2xl border-2 border-amber-400 shadow-2xl overflow-hidden">
+          <div className="relative max-w-2xl max-h-[85vh] bg-white p-2 rounded-xl border border-slate-300 shadow-2xl overflow-hidden">
             <img 
               src={selectedImage} 
-              alt="Enlarged Inspection" 
-              className="max-h-[80vh] w-auto object-contain rounded-xl"
+              alt="Inspection" 
+              className="max-h-[80vh] w-auto object-contain rounded-lg"
             />
             <button
               type="button"
               onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-black/70 text-white hover:bg-black transition-colors"
+              className="absolute top-3 right-3 p-1.5 rounded-full bg-slate-900/70 text-white hover:bg-slate-900 transition-colors"
             >
-              ✕
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>

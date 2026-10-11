@@ -15,7 +15,7 @@ import {
   Hourglass,
   X
 } from 'lucide-react';
-import { UserProfile, AuthSession, DockyardConfig, NavTab, AdminSubTab } from '../types';
+import { UserProfile, AuthSession, DockyardConfig, NavTab, AdminSubTab, Workshop } from '../types';
 import { Settings as SettingsIcon } from 'lucide-react';
 
 interface SidebarProps {
@@ -25,6 +25,7 @@ interface SidebarProps {
   setAdminSubTab?: (tab: AdminSubTab) => void;
   profile: UserProfile;
   authSession: AuthSession | null;
+  workshops?: Workshop[];
   dockyardConfig: DockyardConfig;
   workshopsCount?: number;
   shipsCount?: number;
@@ -42,6 +43,8 @@ export default function Sidebar({
   setAdminSubTab,
   profile, 
   authSession, 
+  workshops = [],
+  dockyardConfig,
   workshopsCount = 27,
   shipsCount = 10,
   pendingCount = 0,
@@ -51,6 +54,18 @@ export default function Sidebar({
   onCloseMobile
 }: SidebarProps) {
   const isAdmin = authSession?.role === 'admin';
+
+  // For workshop users, find active workshop details
+  const currentWorkshop = !isAdmin && authSession
+    ? workshops?.find(ws => ws.id === authSession.workshopId || ws.code === authSession.workshopCode)
+    : null;
+
+  const displayName = currentWorkshop?.oicName 
+    ? (currentWorkshop.oicRank ? `${currentWorkshop.oicRank} ${currentWorkshop.oicName}` : currentWorkshop.oicName)
+    : (authSession?.officerName || profile.name);
+
+  const displayRank = currentWorkshop?.oicRank || authSession?.officerRank || profile.rank;
+  const displayAvatar = currentWorkshop?.photo || authSession?.photo || profile.avatar || '/anchor.jpg';
 
   const handleSelectAdminOption = (sub: AdminSubTab) => {
     setActiveTab('admin');
@@ -332,10 +347,10 @@ export default function Sidebar({
       <div id="sidebar-profile-footer" className="p-4 flex flex-col items-center text-center bg-[#001024]/95 shrink-0 space-y-2">
         {/* Large Circular Profile Photo */}
         <div className="relative group">
-          {profile.avatar ? (
+          {displayAvatar ? (
             <img
-              src={profile.avatar}
-              alt={profile.name}
+              src={displayAvatar}
+              alt={displayName}
               referrerPolicy="no-referrer"
               className="w-20 h-20 sm:w-22 sm:h-22 rounded-full object-cover border-3 border-amber-400 shadow-xl group-hover:scale-105 transition-transform"
             />
@@ -349,11 +364,11 @@ export default function Sidebar({
 
         {/* Officer Name & Rank */}
         <div className="w-full px-2 min-w-0">
-          <h4 className="text-sm sm:text-base font-algerian font-bold text-white truncate" title={authSession?.officerName || profile.name}>
-            {authSession?.officerName || profile.name}
+          <h4 className="text-sm sm:text-base font-algerian font-bold text-white truncate" title={displayName}>
+            {displayName}
           </h4>
-          <p className="text-xs text-amber-400 font-semibold truncate mt-0.5" title={profile.rank}>
-            {profile.rank}
+          <p className="text-xs text-amber-400 font-semibold truncate mt-0.5" title={displayRank}>
+            {displayRank}
           </p>
           <p className="text-[10px] text-cyan-200/70 font-mono mt-0.5 truncate">
             {authSession?.username || profile.officialId}

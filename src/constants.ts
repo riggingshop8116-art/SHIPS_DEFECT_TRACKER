@@ -9,7 +9,7 @@ export const DEFAULT_DOCKYARD_CONFIG: DockyardConfig = {
   yardMotto: 'In Peace, In War, Invincible at Sea',
   commandBase: 'BNS ISSA KHAN / NEW MOORING, CHATTOGRAM',
   noticeText: 'All workshops are instructed to update defect resolutions and technical inspection reports in a timely manner according to designated shifts.',
-  marqueeText: '⚓ WELCOME TO AREA SUPERINTENDENT DOCKYARD ⚓ — BANGLADESH NAVY DOCKYARD CHATTOGRAM TECHNICAL DEFECT TRACKING & FLEET MAINTENANCE COMMAND — ALL 27 WORKSHOPS OPERATIONAL READINESS 100% ⚓',
+  marqueeText: '⚓ WELCOME TO AREA SUPERINTENDENT DOCKYARD ⚓ — BANGLADESH NAVY DOCKYARD CHATTOGRAM — TECHNICAL DEFECT TRACKING & FLEET MAINTENANCE COMMAND ⚓',
   marqueeBadge: 'COMMAND DISPATCH',
   marqueeSpeed: 'slow',
   operationalReadiness: '100%',

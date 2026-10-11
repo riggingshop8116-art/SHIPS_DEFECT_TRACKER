@@ -1,5 +1,5 @@
 import { supabase, SUPABASE_BUCKET_NAME } from '../lib/supabase';
-import { Defect, Workshop, DockyardConfig, UserProfile } from '../types';
+import { Defect, Workshop, DockyardConfig, UserProfile, ProductionUnitItem } from '../types';
 import { 
   DEFAULT_DOCKYARD_CONFIG, 
   DEFAULT_PROFILE, 
@@ -625,6 +625,54 @@ export const supabaseService = {
       console.warn('[Supabase Storage] Exception, falling back to base64 Data URL:', err);
       const dataUrl = await fileToDataUrl(file);
       return { url: dataUrl, isStorage: false };
+    }
+  },
+
+  // 8.5. PRODUCTION DEPARTMENT UNITS OPERATIONS
+  async fetchProductionUnits(): Promise<ProductionUnitItem[] | null> {
+    try {
+      const { data, error } = await supabase
+        .from('dockyard_config')
+        .select('*')
+        .eq('id', 'production_dept_units')
+        .maybeSingle();
+
+      if (error) {
+        console.warn('[Supabase] fetchProductionUnits error:', error.message);
+        return null;
+      }
+      if (!data || !data.yard_name_en) return null;
+      const parsed = JSON.parse(data.yard_name_en);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed as ProductionUnitItem[];
+      }
+      return null;
+    } catch (e) {
+      console.warn('[Supabase] fetchProductionUnits exception:', e);
+      return null;
+    }
+  },
+
+  async saveProductionUnits(units: ProductionUnitItem[]): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('dockyard_config')
+        .upsert({
+          id: 'production_dept_units',
+          yard_name_en: JSON.stringify(units),
+          yard_name_bn: 'PRODUCTION_UNITS',
+          tagline_en: new Date().toISOString(),
+          bg_intensity: 'medium'
+        }, { onConflict: 'id' });
+
+      if (error) {
+        console.warn('[Supabase] saveProductionUnits error:', error.message);
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.warn('[Supabase] saveProductionUnits exception:', e);
+      return false;
     }
   },
 

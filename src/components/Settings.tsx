@@ -114,14 +114,16 @@ export default function Settings({
 
   return (
     <div id="settings-panel" className="space-y-6 max-w-5xl mx-auto pb-12">
-      {/* Settings Title Header */}
-      <div className="bg-gradient-to-r from-[#002147] to-[#003366] p-6 rounded-2xl border-l-8 border-yellow-500 text-white flex justify-between items-center shadow-lg">
+      {/* Settings Title Header - Executive Bangladesh Naval Green (#006A4E) & Cream (#FFFDD0) Design */}
+      <div className="bg-gradient-to-r from-[#006A4E] via-[#004e39] to-[#006A4E] p-6 rounded-2xl border-2 border-[#FFFDD0]/60 border-l-8 border-l-[#FFFDD0] text-[#FFFDD0] flex justify-between items-center shadow-md">
         <div>
-          <h2 className="text-2xl font-extrabold flex items-center gap-2">
-            <SettingsIcon className="h-6 w-6 text-yellow-500" />
-            সিস্টেম সেটিংস ও কনফিগারেশন (Settings Panel)
+          <h2 className="text-xl sm:text-2xl font-black font-algerian flex items-center gap-2.5 text-[#FFFDD0] tracking-wider">
+            <div className="p-2 rounded-xl bg-[#FFFDD0] text-[#006A4E] shadow-xs">
+              <SettingsIcon className="h-5 w-5 text-[#006A4E]" />
+            </div>
+            <span>সিস্টেম সেটিংস ও কনফিগারেশন • SETTINGS PANEL</span>
           </h2>
-          <p className="text-slate-300 text-xs mt-1">
+          <p className="text-[#FFFDD0]/90 text-xs sm:text-sm mt-1.5 font-medium leading-relaxed">
             জাহাজের তালিকা, প্রোফাইল এবং ডাটাবেস তথ্য প্রয়োজন অনুযায়ী পরিবর্তন ও পরিচালনা করুন।
           </p>
         </div>
@@ -130,11 +132,11 @@ export default function Settings({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* SECTION 1: PROFILE MANAGEMENT */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+        <div className="bg-white/95 p-6 rounded-2xl shadow-sm border-2 border-[#006A4E]/30 hover:border-[#006A4E]/80 flex flex-col justify-between transition-all">
           <div>
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
-              <User className="h-5 w-5 text-[#002147]" />
-              <h3 className="text-base font-bold text-slate-800">অফিসার প্রোফাইল সেটিংস</h3>
+              <User className="h-5 w-5 text-[#006A4E]" />
+              <h3 className="text-base font-bold text-[#006A4E]">অফিসার প্রোফাইল সেটিংস</h3>
             </div>
 
             <form onSubmit={handleSaveProfile} className="space-y-4">
@@ -152,7 +154,7 @@ export default function Settings({
                     <div className="flex items-center gap-2">
                       <label 
                         htmlFor="avatar-file-upload" 
-                        className="bg-[#002147] hover:bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
+                        className="bg-[#006A4E] hover:bg-[#005740] text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
                       >
                         <Upload className="h-3.5 w-3.5 text-yellow-400" />
                         নতুন ছবি আপলোড করুন
@@ -180,7 +182,7 @@ export default function Settings({
                         onClick={() => setProfileAvatar(preset.url)}
                         className={`text-[10px] px-2 py-1 rounded border transition-all cursor-pointer ${
                           profileAvatar === preset.url 
-                            ? 'bg-yellow-100 text-[#002147] border-yellow-400 font-bold' 
+                            ? 'bg-[#006A4E]/10 text-[#006A4E] border-[#006A4E] font-bold' 
                             : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
                         }`}
                       >
@@ -196,7 +198,7 @@ export default function Settings({
                     type="text"
                     value={profileAvatar}
                     onChange={(e) => setProfileAvatar(e.target.value)}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-800 outline-none focus:ring-1 focus:ring-[#002147] bg-white"
+                    className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-800 outline-none focus:ring-1 focus:ring-[#006A4E] bg-white"
                   />
                 </div>
               </div>
@@ -208,7 +210,7 @@ export default function Settings({
                   type="text"
                   value={profileName}
                   onChange={(e) => setProfileName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:ring-1 focus:ring-[#002147] bg-slate-50 font-semibold"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:ring-1 focus:ring-[#006A4E] bg-slate-50 font-semibold"
                 />
               </div>
 
@@ -219,7 +221,7 @@ export default function Settings({
                   type="text"
                   value={profileRank}
                   onChange={(e) => setProfileRank(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:ring-1 focus:ring-[#002147] bg-slate-50 font-semibold"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:ring-1 focus:ring-[#006A4E] bg-slate-50 font-semibold"
                 />
               </div>
 
@@ -230,7 +232,7 @@ export default function Settings({
                   type="text"
                   value={profileId}
                   onChange={(e) => setProfileId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:ring-1 focus:ring-[#002147] bg-slate-50 font-mono"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:ring-1 focus:ring-[#006A4E] bg-slate-50 font-mono"
                 />
               </div>
 
@@ -242,7 +244,7 @@ export default function Settings({
                   value={localShopName}
                   onChange={(e) => setLocalShopName(e.target.value)}
                   placeholder="যেমন: RIGGING SHOP"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold font-mono tracking-wider text-[#002147] outline-none focus:ring-1 focus:ring-[#002147] bg-white"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold font-mono tracking-wider text-[#006A4E] outline-none focus:ring-1 focus:ring-[#006A4E] bg-white"
                 />
                 <p className="text-[10px] text-slate-500 font-medium mt-1">
                   এটি পরিবর্তন করলে অ্যাপ্লিকেশনের উপরের প্রধান হেডারে নাম আপডেট হবে।
@@ -258,7 +260,7 @@ export default function Settings({
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="bg-[#002147] hover:bg-slate-850 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center gap-1 cursor-pointer"
+                  className="bg-gradient-to-r from-[#006A4E] to-[#004e39] hover:from-[#005740] hover:to-[#00402e] text-[#FFFDD0] border-2 border-[#FFFDD0]/60 font-bold px-5 py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center gap-1 cursor-pointer font-algerian tracking-wider"
                 >
                   <UserPlus className="h-4 w-4" />
                   প্রোফাইল সেভ করুন (Save Profile)
@@ -269,11 +271,11 @@ export default function Settings({
         </div>
 
         {/* SECTION 2: SHIPS NAME MANAGEMENT */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+        <div className="bg-white/95 p-6 rounded-2xl shadow-sm border-2 border-[#006A4E]/30 hover:border-[#006A4E]/80 flex flex-col justify-between transition-all">
           <div>
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
-              <Ship className="h-5 w-5 text-[#002147]" />
-              <h3 className="text-base font-bold text-slate-800">জাহাজের তালিকা ব্যবস্থাপনা (Ships List)</h3>
+              <Ship className="h-5 w-5 text-[#006A4E]" />
+              <h3 className="text-base font-bold text-[#006A4E]">জাহাজের তালিকা ব্যবস্থাপনা (Ships List)</h3>
             </div>
 
             {/* Add Ship Form */}
@@ -283,11 +285,11 @@ export default function Settings({
                 value={newShipName}
                 onChange={(e) => setNewShipName(e.target.value)}
                 placeholder="নতুন যুদ্ধজাহাজের নাম (যেমন: BNS Duronto)"
-                className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:ring-1 focus:ring-[#002147] bg-slate-50"
+                className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:ring-1 focus:ring-[#006A4E] bg-slate-50"
               />
               <button
                 type="submit"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1 shadow-sm shrink-0 cursor-pointer"
+                className="bg-[#006A4E] hover:bg-[#005740] text-[#FFFDD0] border-2 border-[#FFFDD0]/60 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1 shadow-sm shrink-0 cursor-pointer"
               >
                 <Plus className="h-4 w-4" />
                 যোগ করুন
@@ -327,12 +329,12 @@ export default function Settings({
       </div>
 
       {/* SECTION 3: SYSTEM RESET & TECHNICAL EXPLANATION */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="bg-white/95 p-6 rounded-2xl shadow-sm border-2 border-[#006A4E]/30 hover:border-[#006A4E]/80 grid grid-cols-1 md:grid-cols-3 gap-6 transition-all">
         
         {/* Reset Actions */}
         <div className="md:col-span-1 border-r border-slate-100 pr-0 md:pr-6 space-y-4">
-          <div className="flex items-center gap-2 text-slate-800 font-bold border-b border-slate-100 pb-2">
-            <Database className="h-5 w-5 text-amber-600" />
+          <div className="flex items-center gap-2 text-[#006A4E] font-bold border-b border-slate-100 pb-2">
+            <Database className="h-5 w-5 text-[#006A4E]" />
             <span>সিস্টেম ডাটাবেস রিসেট</span>
           </div>
           <p className="text-slate-500 text-xs leading-relaxed">
@@ -340,7 +342,7 @@ export default function Settings({
           </p>
           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-700">
             <span>বর্তমানে সংরক্ষিত ডিফেক্ট: </span>
-            <strong className="text-[#002147] font-black">{defectCount} টি</strong>
+            <strong className="text-[#006A4E] font-black">{defectCount} টি</strong>
           </div>
           <button
             onClick={onResetApp}
@@ -353,8 +355,8 @@ export default function Settings({
 
         {/* Technical Info & Instructions */}
         <div className="md:col-span-2 space-y-3 pl-0 md:pl-2">
-          <div className="flex items-center gap-1.5 text-slate-800 font-bold">
-            <Info className="h-5 w-5 text-[#002147]" />
+          <div className="flex items-center gap-1.5 text-[#006A4E] font-bold">
+            <Info className="h-5 w-5 text-[#006A4E]" />
             <span>সিপস ডিফেক্ট ট্র্যাকিং সিস্টেম ইউজার গাইড</span>
           </div>
           <ul className="space-y-2 text-xs text-slate-600 list-disc list-inside">
@@ -365,7 +367,7 @@ export default function Settings({
               <strong>ডিফেক্ট ফাইন্ড (Defect Find):</strong> যেকোনো সময় জাহাজ ও ত্রুটির লোকেশন নির্বাচন করে অথবা দুটি নির্দিষ্ট তারিখ রেঞ্জের মধ্যকার ডিফেক্ট অনুসন্ধান করে তার বর্তমান স্ট্যাটাস দেখুন।
             </li>
             <li>
-              <strong>বাস্তবতা ও প্রিজার্ভেশন:</strong> এই সিস্টেমটি ব্রাউজারের শক্তিশালী <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-800 font-mono">localStorage</code> ডাটাবেস ব্যবহার করে, ফলে রিফ্রেশ দিলেও এন্ট্রি করা ডেটা কখনোই হারিয়ে যাবে না।
+              <strong>বাস্তবতা ও প্রিজার্ভেশন:</strong> এই সিস্টেমটি ব্রাউজারের শক্তিশালী <code className="bg-[#006A4E]/10 px-1 py-0.5 rounded text-[#006A4E] font-mono">localStorage</code> ডাটাবেস ব্যবহার করে, ফলে রিফ্রেশ দিলেও এন্ট্রি করা ডেটা কখনোই হারিয়ে যাবে না।
             </li>
             <li>
               <strong>প্রোফাইল সেটিংস:</strong> আপনার প্রোফাইলের নাম পরিবর্তন করার সাথে সাথেই তা বাম পাশের মূল সাইডবার এবং রিপোর্টিং সিস্টেমের সাথে সিঙ্ক হয়ে যায়।

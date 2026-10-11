@@ -54,8 +54,39 @@ export interface AuthSession {
   workshopNameEn: string;
   username: string;
   officerName: string;
+  officerRank?: string;
   photo?: string;
   loginTime: string;
+}
+
+export interface ProductionUnitItem {
+  id: string;
+  titleEn: string;
+  titleBn?: string;
+  roleTitle: string;
+  workshopCode?: string;
+  category: 'hull' | 'mechanical' | 'weapon_electrical' | 'ordnance' | 'ship_repair';
+  officerDesignation: string;
+  scopeBn: string;
+  responsibilities: string[];
+  keyEquipments: string[];
+  locationInYard?: string;
+  phoneExt?: string;
+}
+
+export interface DGMGroup {
+  id: string;
+  code: string;
+  dgmTitleEn: string;
+  dgmTitleBn: string;
+  category: 'hull' | 'mechanical' | 'weapon_electrical' | 'ordnance' | 'ship_repair';
+  accentColor: string;
+  badgeBg: string;
+  badgeBorder: string;
+  textColor: string;
+  icon?: any;
+  summaryEn: string;
+  units: ProductionUnitItem[];
 }
 
 export interface Defect {

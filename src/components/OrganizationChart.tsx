@@ -498,16 +498,16 @@ export default function OrganizationChart({
   return (
     <div id="organization-chart-view" className="space-y-6 max-w-7xl mx-auto animate-fade-in">
       
-      {/* Top Header Card with Official Bangladesh Navy Crest */}
-      <div className="bg-[#001738]/90 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border border-cyan-500/30 border-l-8 border-l-amber-400 text-white shadow-2xl relative overflow-hidden">
+      {/* Top Header Card with Official Bangladesh Navy Crest - Bangladesh Naval Green (#006A4E) & Cream (#FFFDD0) Design */}
+      <div className="bg-gradient-to-r from-[#006A4E] via-[#355E3B] to-[#006A4E] p-6 sm:p-8 rounded-3xl border-2 border-[#FFFDD0]/60 border-l-8 border-l-[#FFFDD0] text-[#FFFDD0] shadow-md relative overflow-hidden">
         {/* Decorative naval anchor watermark */}
-        <div className="absolute right-4 -bottom-6 opacity-10 pointer-events-none">
-          <Anchor className="h-56 w-56 text-amber-400" />
+        <div className="absolute right-4 -bottom-6 opacity-10 pointer-events-none text-[#FFFDD0]">
+          <Anchor className="h-56 w-56" />
         </div>
 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div className="flex items-start sm:items-center gap-4">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl p-1 bg-gradient-to-br from-yellow-400 via-amber-500 to-amber-600 shadow-xl shadow-amber-500/25 shrink-0 border border-amber-300/80 flex items-center justify-center bg-black">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl p-1 bg-[#FFFDD0] shadow-md shrink-0 border-2 border-[#FFFDD0] flex items-center justify-center bg-black">
               <img 
                 src="/anchor.jpg" 
                 alt="Bangladesh Navy Crest" 
@@ -516,19 +516,19 @@ export default function OrganizationChart({
             </div>
             
             <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-3 py-1 bg-amber-500/20 border border-amber-400/50 rounded-full text-amber-300 font-algerian text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  <Network className="h-3.5 w-3.5 text-amber-400" />
-                  COMMAND ORGANOGRAM & HIERARCHY TREE
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <span className="px-3 py-1 bg-[#FFFDD0] rounded-md text-[#006A4E] font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-xs">
+                  <Network className="h-3.5 w-3.5 text-[#006A4E]" />
+                  <span>কমান্ড অর্গানোগ্রাম • HIERARCHY TREE</span>
                 </span>
-                <span className="text-xs text-cyan-200/80 font-mono">
+                <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-[#004d38]/80 text-[#FFFDD0] border border-[#FFFDD0]/40 font-mono shadow-xs">
                   {dockyardConfig.systemVersion}
                 </span>
               </div>
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-algerian font-bold text-white uppercase tracking-wider">
-                BANGLADESH NAVY DOCKYARD — ORGANIZATION CHART
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-algerian font-bold text-[#FFFDD0] uppercase tracking-wider">
+                বাংলাদেশ নৌবাহিনী ডকইয়ার্ড — অর্গানোগ্রাম চার্ট
               </h2>
-              <p className="text-xs sm:text-sm text-cyan-200/80 font-mono">
+              <p className="text-xs sm:text-sm text-[#FFFDD0]/90 font-medium">
                 সিএসডি কমান্ড হতে শুরু করে ৬টি পরিদপ্তর এবং ২৭টি সক্রিয় ওয়ার্কশপের চেইন অব কমান্ড ট্রি
               </p>
             </div>
@@ -536,24 +536,24 @@ export default function OrganizationChart({
 
           {/* Quick Stats Badges */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <div className="bg-black/40 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-cyan-500/30 text-center min-w-24">
-              <span className="text-[10px] text-cyan-200 font-algerian font-bold uppercase block">DIRECTORATES</span>
-              <span className="text-lg font-black text-amber-400 font-mono">৬ টি</span>
+            <div className="bg-[#FFFDD0] text-[#006A4E] px-4 py-2 rounded-2xl border border-[#FFFDD0] text-center min-w-24 shadow-xs">
+              <span className="text-[10px] text-[#006A4E]/80 font-bold uppercase block font-mono">পরিদপ্তর • Directorates</span>
+              <span className="text-lg font-black text-[#006A4E] font-mono">৬ টি</span>
             </div>
-            <div className="bg-black/40 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-cyan-500/30 text-center min-w-24">
-              <span className="text-[10px] text-cyan-200 font-algerian font-bold uppercase block">TOTAL SHOPS</span>
-              <span className="text-lg font-black text-cyan-300 font-mono">{workshops.length} টি</span>
+            <div className="bg-[#FFFDD0] text-[#006A4E] px-4 py-2 rounded-2xl border border-[#FFFDD0] text-center min-w-24 shadow-xs">
+              <span className="text-[10px] text-[#006A4E]/80 font-bold uppercase block font-mono">মোট শপ • Total Shops</span>
+              <span className="text-lg font-black text-[#006A4E] font-mono">{workshops.length} টি</span>
             </div>
-            <div className="bg-black/40 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-cyan-500/30 text-center min-w-24">
-              <span className="text-[10px] text-cyan-200 font-algerian font-bold uppercase block">TECH DEFECTS</span>
-              <span className="text-lg font-black text-emerald-400 font-mono">{defects.length} টি</span>
+            <div className="bg-[#FFFDD0] text-[#006A4E] px-4 py-2 rounded-2xl border border-[#FFFDD0] text-center min-w-24 shadow-xs">
+              <span className="text-[10px] text-[#006A4E]/80 font-bold uppercase block font-mono">ডিফেক্ট • Tech Defects</span>
+              <span className="text-lg font-black text-[#006A4E] font-mono">{defects.length} টি</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Control Bar: Search Filter, Directorate Selector, View Mode, Expand/Collapse */}
-      <div className="bg-[#00142e]/90 backdrop-blur-xl p-4 rounded-2xl border border-cyan-500/30 text-white shadow-xl flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white/95 p-4 rounded-2xl border-2 border-[#006A4E]/30 text-[#1B331F] shadow-sm flex flex-wrap items-center justify-between gap-4">
         
         {/* Search input */}
         <div className="flex-1 min-w-[260px] max-w-md relative">
@@ -676,7 +676,7 @@ export default function OrganizationChart({
           VIEW MODE 1: INTERACTIVE HIERARCHICAL TREE VIEW
       ========================================================================= */}
       {viewMode === 'tree' ? (
-        <div className="bg-[#001024]/90 backdrop-blur-2xl p-4 sm:p-6 md:p-8 rounded-3xl border border-cyan-500/30 shadow-2xl overflow-x-auto min-h-[500px]">
+        <div className="bg-[#00140e]/95 backdrop-blur-2xl p-4 sm:p-6 md:p-8 rounded-3xl border-2 border-[#006A4E]/30 shadow-2xl overflow-x-auto min-h-[500px]">
           <div className="min-w-[760px] space-y-6">
             <TreeNodeItem 
               node={orgTree} 
@@ -698,11 +698,11 @@ export default function OrganizationChart({
           {orgTree.children?.map(dir => (
             <div 
               key={dir.id}
-              className="bg-[#00142e]/90 backdrop-blur-xl border border-cyan-500/30 rounded-3xl p-6 text-white shadow-xl flex flex-col justify-between space-y-4 hover:border-amber-400/50 transition-all group"
+              className="bg-[#001712]/95 backdrop-blur-xl border-2 border-[#006A4E]/30 rounded-3xl p-6 text-white shadow-xl flex flex-col justify-between space-y-4 hover:border-[#006A4E] transition-all group"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-algerian font-bold uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
+                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-algerian font-bold uppercase bg-[#006A4E]/30 text-emerald-300 border border-[#006A4E]/50">
                     {dir.code}
                   </span>
                   <span className="text-xs text-amber-300 font-mono font-bold">

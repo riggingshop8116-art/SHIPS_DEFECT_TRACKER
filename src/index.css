@@ -66,72 +66,56 @@ svg text {
   background: #00214760;
 }
 
-/* Naval Technical Dockyard Pattern - Clean, High-Contrast Modern Canvas in #FCF4E2 */
+/* Modern Professional Clean Card Classes matching crisp white surface */
 .bg-navy-dockyard-canvas {
-  background-color: #FCF4E2;
-  background-image: 
-    radial-gradient(at 100% 0%, rgba(180, 140, 90, 0.05) 0px, transparent 45%),
-    radial-gradient(at 0% 100%, rgba(180, 140, 90, 0.04) 0px, transparent 45%),
-    linear-gradient(rgba(180, 140, 90, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(180, 140, 90, 0.035) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 28px 28px, 28px 28px;
+  background-color: #f8fafc;
 }
 
 /* Executive Navy Header for Workshop and Admin */
 .bg-navy-header-executive {
-  background: linear-gradient(90deg, #001026 0%, #001a38 50%, #00152e 100%);
-  border-bottom: 2px solid rgba(245, 158, 11, 0.4);
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
 }
 
 .bg-navy-glass-card {
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(180, 140, 90, 0.25);
-  box-shadow: 0 10px 30px -5px rgba(0, 16, 38, 0.08), 0 4px 10px -3px rgba(0, 16, 38, 0.04);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
 }
 
 .bg-navy-glass-card-subtle {
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(180, 140, 90, 0.2);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 
 .bg-navy-glass-dark {
-  background: rgba(0, 21, 46, 0.94);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  box-shadow: 0 14px 34px -4px rgba(0, 16, 38, 0.28);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
 }
 
-/* Premium Naval Marine Frosted Glass Classes matching #FCF4E2 Canvas */
+/* Professional Marine Cards */
 .bg-naval-card-frosted {
-  background: rgba(0, 22, 54, 0.94);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(245, 158, 11, 0.38);
-  box-shadow: 0 18px 40px -6px rgba(0, 16, 40, 0.32), 0 0 15px -2px rgba(245, 158, 11, 0.12);
-  color: #ffffff;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  color: #1e293b;
 }
 
 .bg-naval-subcard-frosted {
-  background: rgba(0, 14, 38, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 
 .bg-naval-input-frosted {
-  background: rgba(0, 12, 32, 0.90);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #ffffff;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
   outline: none;
 }
 .bg-naval-input-frosted:focus {
-  border-color: #f59e0b;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+  border-color: #0f172a;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1);
 }
 
 /* Streaming Right-to-Left Slow Marquee for Header (হোমের হেডারে লেখাটি ডান থেকে বামে শো হবে ও ধীরে শো হবে) */

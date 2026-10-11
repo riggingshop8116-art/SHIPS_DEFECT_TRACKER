@@ -12,7 +12,7 @@ import {
   Sparkles,
   RefreshCw
 } from 'lucide-react';
-import { UserProfile, AuthSession } from '../types';
+import { UserProfile, AuthSession, Workshop } from '../types';
 import { supabaseService } from '../services/supabaseService';
 
 interface ProfileModalProps {
@@ -20,7 +20,8 @@ interface ProfileModalProps {
   onClose: () => void;
   profile: UserProfile;
   authSession: AuthSession | null;
-  onSaveProfile: (newProfile: UserProfile, newOfficerName?: string) => void;
+  workshops?: Workshop[];
+  onSaveProfile: (newProfile: UserProfile, newOfficerName?: string, newOfficerRank?: string, newPhone?: string) => void;
 }
 
 export default function ProfileModal({
@@ -28,6 +29,7 @@ export default function ProfileModal({
   onClose,
   profile,
   authSession,
+  workshops = [],
   onSaveProfile
 }: ProfileModalProps) {
   if (!isOpen) return null;
@@ -35,12 +37,27 @@ export default function ProfileModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isAdmin = authSession?.role === 'admin';
 
+  // For workshop users, find active workshop details
+  const currentWorkshop = !isAdmin && authSession
+    ? workshops.find(ws => ws.id === authSession.workshopId || ws.code === authSession.workshopCode)
+    : null;
+
   // Form State
-  const [name, setName] = useState<string>(authSession?.officerName || profile.name || '');
-  const [rank, setRank] = useState<string>(profile.rank || 'Lieutenant Commander, BN');
-  const [officialId, setOfficialId] = useState<string>(authSession?.username || profile.officialId || 'P No. 1420');
-  const [phone, setPhone] = useState<string>('Ext: 8116 (BN Dockyard)');
-  const [avatar, setAvatar] = useState<string>(profile.avatar || '/anchor.jpg');
+  const [name, setName] = useState<string>(
+    currentWorkshop?.oicName || authSession?.officerName || profile.name || ''
+  );
+  const [rank, setRank] = useState<string>(
+    currentWorkshop?.oicRank || authSession?.officerRank || profile.rank || 'Lieutenant Commander, BN'
+  );
+  const [officialId, setOfficialId] = useState<string>(
+    currentWorkshop?.username || authSession?.username || profile.officialId || 'P No. 1420'
+  );
+  const [phone, setPhone] = useState<string>(
+    currentWorkshop?.phoneExt ? `Ext: ${currentWorkshop.phoneExt}` : 'Ext: 8116 (BN Dockyard)'
+  );
+  const [avatar, setAvatar] = useState<string>(
+    currentWorkshop?.photo || authSession?.photo || profile.avatar || '/anchor.jpg'
+  );
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [dragActive, setDragActive] = useState<boolean>(false);
 
@@ -118,7 +135,7 @@ export default function ProfileModal({
       avatar: avatar
     };
 
-    onSaveProfile(updatedProfile, name.trim());
+    onSaveProfile(updatedProfile, name.trim(), rank.trim(), phone.trim());
     setIsSaved(true);
     setTimeout(() => {
       setIsSaved(false);

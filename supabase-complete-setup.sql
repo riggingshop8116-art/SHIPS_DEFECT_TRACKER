@@ -369,6 +369,60 @@ INSERT INTO public.locations (name) VALUES
 ('Galley & Bakery Deck')
 ON CONFLICT (name) DO NOTHING;
 
+-- Compatibility Columns for Universal Querying
+ALTER TABLE public.defects ADD COLUMN IF NOT EXISTS "shipName" TEXT;
+ALTER TABLE public.defects ADD COLUMN IF NOT EXISTS "defectDate" TEXT;
+ALTER TABLE public.defects ADD COLUMN IF NOT EXISTS "defectDescription" TEXT;
+ALTER TABLE public.defects ADD COLUMN IF NOT EXISTS "defectImage" TEXT;
+ALTER TABLE public.defects ADD COLUMN IF NOT EXISTS "solutionDate" TEXT;
+ALTER TABLE public.defects ADD COLUMN IF NOT EXISTS "solutionDescription" TEXT;
+ALTER TABLE public.defects ADD COLUMN IF NOT EXISTS "solutionImage" TEXT;
+ALTER TABLE public.defects ADD COLUMN IF NOT EXISTS "workshopCode" TEXT;
+
+-- Initial Sample Defect Records
+INSERT INTO public.defects (id, workshop, ship, location, defect_date, defect_desc, defect_image, solution_date, solution_desc, solution_image, status)
+VALUES
+(
+  'def-001',
+  'WS-08 IC Engine & Diesel Shop',
+  'BNS Bangabandhu (F-25)',
+  'Engine Room (ER) Lower Level',
+  CURRENT_DATE::TEXT,
+  'Main Propulsion Diesel Generator #2 high exhaust gas temperature alarm triggered during trial run.',
+  'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80',
+  '',
+  '',
+  '',
+  'In Progress'
+),
+(
+  'def-002',
+  'WS-05 Electrical Power Workshop',
+  'BNS Somudra Joy (F-28)',
+  'Main Switchboard (MSB) Flat',
+  CURRENT_DATE::TEXT,
+  'Port-side 440V auxiliary distribution busbar insulation resistance dropped below 0.5 Megohm.',
+  'https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=800&auto=format&fit=crop&q=80',
+  '',
+  '',
+  '',
+  'In Progress'
+),
+(
+  'def-003',
+  'WS-19 Hydraulic & Pneumatic Shop',
+  'BNS Ali Haider (F-17)',
+  'Main Steering Gear Flat',
+  (CURRENT_DATE - INTERVAL '2 days')::DATE::TEXT,
+  'Emergency steering hydraulic actuator port cylinder gland seal oil weeping observed.',
+  'https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?w=800&auto=format&fit=crop&q=80',
+  CURRENT_DATE::TEXT,
+  'Replaced dynamic viton chevron seal set, replenished Tellus S2 V68 hydraulic fluid and pressure tested up to 210 bar.',
+  'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80',
+  'Solved'
+)
+ON CONFLICT (id) DO NOTHING;
+
 -- ==============================================================================
 -- SETUP COMPLETE
 -- All 6 tables, storage bucket, RLS policies, and default records created!

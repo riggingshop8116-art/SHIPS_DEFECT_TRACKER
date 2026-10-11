@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { WARSHIP_COMPARTMENTS, ShipCompartment } from '../data/shipInspectionData';
 import { Defect, Workshop, AuthSession } from '../types';
+import WorkshopProgressAnalytics from './WorkshopProgressAnalytics';
 
 interface Ship3DViewerProps {
   defects: Defect[];
@@ -54,21 +55,12 @@ export default function Ship3DViewer({
     : 'all';
   const [selectedWorkshopFilter, setSelectedWorkshopFilter] = useState<string>(defaultWsCode);
 
-  // Custom Downward Dropdown State
-  const [isWsDropdownOpen, setIsWsDropdownOpen] = useState(false);
-  const [wsSearch, setWsSearch] = useState('');
-  const wsDropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown on outside click
+  // Synchronize when authSession changes (e.g. on login/logout)
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (wsDropdownRef.current && !wsDropdownRef.current.contains(e.target as Node)) {
-        setIsWsDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (authSession?.workshopCode && authSession.workshopCode !== 'HQ-ADMIN' && authSession.workshopCode !== 'HQ') {
+      setSelectedWorkshopFilter(authSession.workshopCode);
+    }
+  }, [authSession?.workshopCode]);
 
   // Active Selected Compartment for Detailed Box
   const [activeCompartment, setActiveCompartment] = useState<ShipCompartment | null>(null);
@@ -109,18 +101,6 @@ export default function Ship3DViewer({
     return workshops.find(w => w.code === selectedWorkshopFilter) || null;
   }, [workshops, selectedWorkshopFilter]);
 
-  // Filtered workshops list for search in custom dropdown
-  const filteredWorkshopsList = useMemo(() => {
-    if (!wsSearch.trim()) return workshops;
-    const q = wsSearch.toLowerCase();
-    return workshops.filter(ws => 
-      ws.code.toLowerCase().includes(q) ||
-      ws.nameEn.toLowerCase().includes(q) ||
-      ws.nameBn.toLowerCase().includes(q) ||
-      (ws.category && ws.category.toLowerCase().includes(q))
-    );
-  }, [workshops, wsSearch]);
-
   // Signaled compartments assigned to selected workshop
   const signaledCompartments = useMemo(() => {
     if (selectedWorkshopFilter === 'all') return WARSHIP_COMPARTMENTS;
@@ -155,396 +135,133 @@ export default function Ship3DViewer({
     <div className="space-y-6 animate-fade-in">
       
       {/* =========================================================================
-          1. TOP COMMAND & 3D INSPECTION CONTROLS BAR
+          UNIFIED EXECUTIVE WORKSHOP ANALYTICS CONTAINER (ডিফেক্ট, প্রগ্রেস, কমপ্লিট ও গ্রাফ চার্ট)
       ========================================================================= */}
-      <div className="bg-[#001738]/85 backdrop-blur-xl p-5 rounded-3xl border border-cyan-400/30 text-white shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400"></div>
+      <WorkshopProgressAnalytics
+        workshops={workshops}
+        defects={defects}
+        selectedWorkshopFilter={selectedWorkshopFilter}
+        onSelectWorkshop={(code) => setSelectedWorkshopFilter(code)}
+        authSession={authSession}
+      />
 
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          {/* Title & Info */}
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="p-1.5 bg-amber-500/20 text-amber-300 rounded-lg border border-amber-400/40">
-                <Ship className="h-5 w-5" />
-              </span>
-              <span className="text-xs font-algerian font-bold tracking-widest text-amber-300 uppercase">
-                3D WARSHIP DIGITAL TWIN // TECHNICAL INSPECTION
-              </span>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+      {/* =========================================================================
+          2. THE 3D WARSHIP INTERACTIVE CANVAS & DIGITAL TWIN STAGE (এর নিচে জাহাজের 3D ভিউ)
+      ========================================================================= */}
+      <div className="relative bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm overflow-hidden space-y-4 text-slate-800">
+        
+        {/* Subtle Engineering Grid Background */}
+        <div 
+          className="absolute inset-0 pointer-events-none opacity-40"
+          style={{
+            backgroundImage: `linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px)`,
+            backgroundSize: '32px 32px'
+          }}
+        ></div>
+
+        {/* 3D Warship Interactive Header & Control Toolbar */}
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-800">
+              <Crosshair className="h-4 w-4 text-slate-600" />
+              <span>Warship Technical 3D Twin</span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-algerian font-bold text-white tracking-wide drop-shadow-sm truncate uppercase">
-              WARSHIP 3D COMPARTMENT & WORKSHOP TECHNICAL DOSSIER
-            </h2>
-            <p className="text-xs text-cyan-200/80 font-mono mt-0.5">
-              Click on ship compartments to view assigned workshop responsibilities, technical tasks, and active defect logs.
-            </p>
-          </div>
 
-          {/* Quick Ship Selector & Filters */}
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            {/* Warship Selector */}
-            <div className="flex items-center gap-2 bg-black/40 border border-white/15 px-3 py-1.5 rounded-xl">
-              <span className="text-[10px] text-amber-300 font-algerian font-bold uppercase">WARSHIP:</span>
+            {/* Warship Selector Dropdown */}
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+              <Ship className="h-3.5 w-3.5 text-slate-500" />
+              <span className="text-[11px] text-slate-500 font-semibold uppercase">জাহাজ:</span>
               <select
                 value={selectedShip}
                 onChange={(e) => setSelectedShip(e.target.value)}
-                className="bg-transparent text-xs font-algerian font-bold text-white outline-none cursor-pointer pr-2 uppercase"
+                className="bg-transparent text-xs font-semibold text-slate-800 outline-none cursor-pointer pr-1"
               >
                 {ships.map(s => (
-                  <option key={s} value={s} className="bg-[#001738] text-white">
+                  <option key={s} value={s} className="bg-white text-slate-800">
                     {s}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* View Mode 3D Toggles */}
-            <div className="flex items-center bg-black/50 border border-white/15 p-1 rounded-xl">
+            {/* Active Signal Status */}
+            {selectedWorkshopObj ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                <span>সিগনাল: <strong className="text-slate-900">{selectedWorkshopObj.code}</strong> ({signaledCompartments.length} কম্পার্টমেন্ট)</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedWorkshopFilter('all')}
+                  className="ml-1 text-[11px] font-semibold text-slate-700 hover:text-slate-900 underline cursor-pointer"
+                >
+                  রিসেট
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200">
+                <Radio className="h-3.5 w-3.5 text-slate-500" />
+                <span>সকল কম্পার্টমেন্ট সক্রিয়</span>
+              </div>
+            )}
+          </div>
+
+          {/* Right side: View Angle Controls & Active Defects */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center bg-slate-100 border border-slate-200 p-1 rounded-xl">
               <button
                 type="button"
                 onClick={() => setViewMode('isometric')}
-                className={`px-3 py-1 rounded-lg text-xs font-algerian font-bold uppercase transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === 'isometric'
-                    ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-[#001733] shadow-md'
-                    : 'text-slate-300 hover:text-white'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
-                title="3D ISOMETRIC"
               >
-                3D ISOMETRIC
+                3D Isometric
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('profile')}
-                className={`px-3 py-1 rounded-lg text-xs font-algerian font-bold uppercase transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === 'profile'
-                    ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-[#001733] shadow-md'
-                    : 'text-slate-300 hover:text-white'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
-                title="SIDE PROFILE"
               >
-                PROFILE
+                Profile
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('top')}
-                className={`px-3 py-1 rounded-lg text-xs font-algerian font-bold uppercase transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === 'top'
-                    ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-[#001733] shadow-md'
-                    : 'text-slate-300 hover:text-white'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
-                title="TOP DECK PLAN"
               >
-                TOP DECK
+                Top Deck
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode('xray')}
-                className={`px-3 py-1 rounded-lg text-xs font-algerian font-bold uppercase transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === 'xray'
-                    ? 'bg-cyan-500 text-[#001733] shadow-md'
-                    : 'text-cyan-300 hover:text-cyan-100'
-                }`}
-                title="INTERNAL X-RAY"
-              >
-                X-RAY
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Workshop Filter Strip */}
-        <div className="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 min-w-0 flex-wrap">
-            <span className="text-slate-300 font-algerian font-bold uppercase flex items-center gap-1.5 shrink-0 text-xs">
-              <Building2 className="h-3.5 w-3.5 text-amber-400" />
-              SELECT WORKSHOP:
-            </span>
-
-            {/* Downward-Opening Custom Dropdown */}
-            <div className="relative" ref={wsDropdownRef}>
-              <button
-                type="button"
-                onClick={() => setIsWsDropdownOpen(prev => !prev)}
-                className="bg-[#00224d] border border-cyan-400/40 hover:border-amber-400/60 text-amber-300 font-algerian font-bold uppercase px-3.5 py-1.5 rounded-xl outline-none text-xs cursor-pointer flex items-center gap-2 min-w-[220px] max-w-[300px] justify-between transition-all shadow-md"
-              >
-                <div className="flex items-center gap-2 truncate">
-                  <span className="truncate">
-                    {selectedWorkshopFilter === 'all' 
-                      ? '🌐 ALL 27 WORKSHOPS' 
-                      : selectedWorkshopObj 
-                      ? `${selectedWorkshopObj.code}: ${selectedWorkshopObj.nameEn}` 
-                      : selectedWorkshopFilter}
-                  </span>
-                </div>
-                <ChevronDown className={`h-3.5 w-3.5 text-amber-400 shrink-0 transition-transform ${isWsDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Downward Menu */}
-              {isWsDropdownOpen && (
-                <div className="absolute left-0 top-full mt-2 w-72 sm:w-80 max-h-80 bg-[#001738] border-2 border-amber-400/60 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col backdrop-blur-xl animate-fade-in">
-                  <div className="p-2 border-b border-white/10 bg-black/40">
-                    <div className="relative">
-                      <Search className="h-3.5 w-3.5 text-amber-400 absolute left-2.5 top-2.5" />
-                      <input
-                        type="text"
-                        value={wsSearch}
-                        onChange={(e) => setWsSearch(e.target.value)}
-                        placeholder="Search workshop code or name..."
-                        className="w-full bg-[#000d1e] border border-cyan-400/30 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white outline-none focus:border-amber-400 font-sans"
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-
-                  <div className="overflow-y-auto max-h-60 p-1.5 space-y-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedWorkshopFilter('all');
-                        setIsWsDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer ${
-                        selectedWorkshopFilter === 'all'
-                          ? 'bg-amber-400 text-[#001733] font-bold shadow-md'
-                          : 'text-white hover:bg-white/10'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span>🌐</span>
-                        <span className="font-algerian font-bold">ALL 27 WORKSHOPS (সকল শপ)</span>
-                      </div>
-                      {selectedWorkshopFilter === 'all' && <Check className="h-3.5 w-3.5" />}
-                    </button>
-
-                    {filteredWorkshopsList.map((ws) => {
-                      const isSelected = selectedWorkshopFilter === ws.code;
-                      return (
-                        <button
-                          key={ws.code}
-                          type="button"
-                          onClick={() => {
-                            setSelectedWorkshopFilter(ws.code);
-                            setIsWsDropdownOpen(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-amber-400 text-[#001733] font-bold shadow-md'
-                              : 'text-slate-200 hover:bg-white/10'
-                          }`}
-                        >
-                          <div className="min-w-0 pr-2">
-                            <div className="flex items-center gap-1.5 font-bold font-mono text-[11px]">
-                              <span className={isSelected ? 'text-[#001733]' : 'text-amber-300'}>{ws.code}</span>
-                              <span className="truncate">{ws.nameEn}</span>
-                            </div>
-                            <div className={`text-[10px] truncate ${isSelected ? 'text-[#001733]/80' : 'text-slate-400'}`}>
-                              {ws.nameBn} • {ws.category}
-                            </div>
-                          </div>
-                          {isSelected && <Check className="h-3.5 w-3.5 shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Quick My Workshop Button if logged in */}
-            {isWorkshopUser && (
-              <button
-                type="button"
-                onClick={() => setSelectedWorkshopFilter(myWorkshopCode)}
-                className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 cursor-pointer text-xs ${
-                  selectedWorkshopFilter === myWorkshopCode
-                    ? 'bg-amber-400 text-[#001733] shadow-lg shadow-amber-500/20'
-                    : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-400/40'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>MY WORKSHOP: {myWorkshopName}</span>
+                X-Ray
               </button>
-            )}
-
-            {selectedWorkshopFilter !== 'all' && (
-              <button
-                type="button"
-                onClick={() => setSelectedWorkshopFilter('all')}
-                className="text-[11px] text-cyan-300 hover:underline cursor-pointer ml-1 font-mono font-bold"
-              >
-                RESET (ALL)
-              </button>
-            )}
-          </div>
-
-          {/* Active Highlight Status */}
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] font-mono text-cyan-200 bg-cyan-950/70 px-2.5 py-1 rounded-lg border border-cyan-400/30">
-              SIGNALED: <strong className="text-amber-300">{highlightedCompartmentIds.size}</strong> UNITS
-            </span>
-            <span className="text-[11px] font-mono text-rose-300 bg-rose-950/70 px-2.5 py-1 rounded-lg border border-rose-400/30">
-              ACTIVE DEFECTS: <strong className="text-white">{pendingShipDefectsCount}</strong>
-            </span>
-          </div>
-        </div>
-
-        {/* Quick Workshop Selector Chips Row */}
-        <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
-          <span className="text-slate-400 font-mono text-[10px] shrink-0 uppercase">QUICK CHIPS:</span>
-          {[
-            { code: 'all', label: '🌐 ALL 27' },
-            { code: 'WS-01', label: 'WS-01: RIGGING' },
-            { code: 'WS-02', label: 'WS-02: MACHINE' },
-            { code: 'WS-03', label: 'WS-03: HULL' },
-            { code: 'WS-05', label: 'WS-05: ELECTRICAL' },
-            { code: 'WS-07', label: 'WS-07: WEAPONS' },
-            { code: 'WS-08', label: 'WS-08: DIESEL' },
-            { code: 'WS-10', label: 'WS-10: HVAC' },
-            { code: 'WS-19', label: 'WS-19: HYDRAULIC' },
-          ].map((chip) => {
-            const isSelected = selectedWorkshopFilter === chip.code;
-            return (
-              <button
-                key={chip.code}
-                type="button"
-                onClick={() => setSelectedWorkshopFilter(chip.code)}
-                className={`px-2.5 py-1 rounded-lg font-mono font-bold transition-all shrink-0 cursor-pointer ${
-                  isSelected
-                    ? 'bg-amber-400 text-[#001733] shadow-md ring-1 ring-white'
-                    : 'bg-white/5 text-slate-300 hover:bg-white/15 hover:text-white border border-white/10'
-                }`}
-              >
-                {chip.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* =========================================================================
-          ACTIVE WORKSHOP SIGNAL COMMAND & WORK HUD (তার কাজ অনুযায়ী জাহাজে সিগনাল)
-      ========================================================================= */}
-      {selectedWorkshopObj ? (
-        <div className="bg-gradient-to-r from-[#001738] via-[#002456] to-[#001738] border-2 border-amber-400/60 rounded-3xl p-4 sm:p-5 text-white shadow-2xl relative overflow-hidden animate-fade-in">
-          <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
-          
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            {/* Left info: Workshop Name, Code & Live Signal Broadcast Status */}
-            <div className="space-y-1.5 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-1 rounded-xl bg-amber-400 text-[#001733] font-mono font-black text-xs shadow-md">
-                  {selectedWorkshopObj.code}
-                </span>
-                <span className="text-sm sm:text-base font-algerian font-bold text-white tracking-wide uppercase">
-                  {selectedWorkshopObj.nameEn} ({selectedWorkshopObj.nameBn})
-                </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-400/40 text-cyan-300">
-                  {selectedWorkshopObj.category}
-                </span>
-              </div>
-
-              {/* Live Signal Status & Active Work Notice */}
-              <div className="flex items-center gap-2 text-xs font-mono text-emerald-300">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                </span>
-                <span className="font-bold tracking-wider uppercase text-amber-300">
-                  TACTICAL SIGNAL ACTIVE // {signaledCompartments.length} COMPARTMENTS ACTIVATED ON {selectedShip.toUpperCase()}
-                </span>
-              </div>
-
-              {/* Scope of Work on this ship */}
-              <p className="text-xs text-slate-200 font-sans max-w-3xl leading-relaxed">
-                <strong className="text-amber-300 font-mono">কার্যপরিধি (MAINTENANCE SCOPE): </strong>
-                {selectedWorkshopObj.description || `${selectedWorkshopObj.nameBn} এর নির্ধারিত টেকনিক্যাল ইন্সপেকশন, কম্পোনেন্ট ওভারহোল এবং জাহাজের সার্বক্ষণিক মেরামত কার্যক্রম।`}
-              </p>
-
-              {/* OIC and Direct Contact */}
-              <div className="flex items-center gap-4 text-xs font-mono text-cyan-200/90 pt-1 flex-wrap">
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-3.5 w-3.5 text-amber-400" />
-                  <span>OIC: <strong>{selectedWorkshopObj.oicRank} {selectedWorkshopObj.oicName}</strong></span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>INTERCOM EXT: <strong className="text-amber-300">{selectedWorkshopObj.phoneExt}</strong></span>
-                </div>
-              </div>
             </div>
 
-            {/* Right side: Defect status badge & quick compartment jumpers */}
-            <div className="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end gap-2.5 shrink-0">
-              {signaledDefectsCount > 0 ? (
-                <div className="px-3.5 py-2 rounded-2xl bg-rose-950/90 border border-rose-500/80 text-rose-200 text-xs font-mono flex items-center gap-2 shadow-lg shadow-rose-900/30">
-                  <AlertTriangle className="h-4 w-4 text-rose-400 animate-bounce" />
-                  <span>
-                    <strong className="text-white text-sm">{signaledDefectsCount}</strong> DEFECT SIGNAL FLASHING RED
-                  </span>
-                </div>
-              ) : (
-                <div className="px-3.5 py-2 rounded-2xl bg-emerald-950/80 border border-emerald-500/60 text-emerald-200 text-xs font-mono flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  <span>ALL {signaledCompartments.length} SECTORS OPERATIONAL</span>
-                </div>
-              )}
-
-              {/* Clickable quick jump buttons to the signaled compartments */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] font-mono text-slate-400 uppercase">JUMP TO:</span>
-                {signaledCompartments.map(comp => (
-                  <button
-                    key={comp.id}
-                    type="button"
-                    onClick={() => handleOpenDetails(comp)}
-                    className="text-[10px] font-mono px-2 py-1 rounded-lg bg-white/10 hover:bg-amber-400 hover:text-[#001733] text-amber-200 border border-amber-400/30 transition-all cursor-pointer font-bold"
-                    title={`View ${comp.nameEn} (${comp.code})`}
-                  >
-                    {comp.code}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* When "ALL 27 WORKSHOPS" is selected */
-        <div className="bg-[#001738]/70 backdrop-blur-md border border-cyan-400/25 rounded-2xl p-3.5 text-xs text-cyan-200/90 flex flex-wrap items-center justify-between gap-3 font-mono">
-          <div className="flex items-center gap-2">
-            <Radio className="h-4 w-4 text-cyan-400 animate-pulse" />
-            <span>
-              BROADCASTING GLOBAL FLEET SIGNALS FOR <strong>ALL 27 WORKSHOPS</strong> // উপরে যে ওয়ার্কশপ সিলেক্ট করবেন তার কাজ অনুযায়ী জাহাজে সিগনাল শো করবে।
+            <span className="text-xs font-medium text-rose-700 bg-rose-50 px-2.5 py-1.5 rounded-xl border border-rose-200">
+              বকেয়া ডিফেক্ট: <strong className="text-rose-900">{pendingShipDefectsCount}</strong>
             </span>
           </div>
-          <span className="text-amber-300 font-bold">12 COMPARTMENT STATIONS ACTIVE</span>
-        </div>
-      )}
-
-      {/* =========================================================================
-          2. THE 3D WARSHIP INTERACTIVE CANVAS & DIGITAL TWIN STAGE
-      ========================================================================= */}
-      <div className="relative bg-[#001229]/90 backdrop-blur-2xl rounded-3xl border border-cyan-400/35 p-4 sm:p-6 shadow-[0_25px_60px_-15px_rgba(0,10,35,0.9)] overflow-hidden">
-        
-        {/* Tactical Ambient Radar Grid Background */}
-        <div 
-          className="absolute inset-0 pointer-events-none opacity-20"
-          style={{
-            backgroundImage: `linear-gradient(to right, #0ea5e9 1px, transparent 1px), linear-gradient(to bottom, #0ea5e9 1px, transparent 1px)`,
-            backgroundSize: '50px 50px'
-          }}
-        ></div>
-
-        {/* Tactical Coordinate Accents */}
-        <div className="absolute top-3 left-4 text-[10px] font-mono text-cyan-400/80 flex items-center gap-2 select-none pointer-events-none z-10">
-          <Crosshair className="h-3 w-3 text-cyan-400" />
-          <span>BNS DIGITAL TWIN // 110M GUIDED MISSILE FRIGATE</span>
-        </div>
-        <div className="absolute top-3 right-4 text-[10px] font-mono text-amber-300/80 select-none pointer-events-none z-10">
-          <span>VIEW: {viewMode.toUpperCase()} // SCALE 1:350</span>
         </div>
 
         {/* Realistic Naval Warship Schematic & 3D Interactive Hotspot Container */}
-        <div className="relative w-full aspect-[16/9] min-h-[380px] max-h-[560px] flex items-center justify-center select-none overflow-hidden my-2">
+        <div className="relative w-full aspect-[16/9] min-h-[380px] max-h-[560px] flex items-center justify-center select-none overflow-hidden my-2 bg-slate-50/50 rounded-xl border border-slate-100">
           
           {/* Floating Subtle Warship Motion Animation Container */}
           <div className="relative w-full h-full flex items-center justify-center animate-float-ship">
@@ -808,86 +525,74 @@ export default function Ship3DViewer({
                   {/* Clickable Beacon Button & Tactical Work Signal */}
                   <div className="relative group flex flex-col items-center">
                     
-                    {/* Concentric Pulsing Radar Signal Waves */}
+                    {/* Concentric Signal Waves */}
                     {isSignaled && (
                       <>
-                        <span className={`absolute -inset-3 rounded-full animate-ping opacity-75 pointer-events-none ${
+                        <span className={`absolute -inset-2.5 rounded-full animate-ping opacity-60 pointer-events-none ${
                           hasDefects 
                             ? 'bg-rose-500' 
                             : selectedWorkshopFilter !== 'all'
-                            ? 'bg-amber-400'
+                            ? 'bg-blue-500'
                             : isMyShopAssigned 
-                            ? 'bg-amber-400' 
-                            : 'bg-cyan-400'
-                        }`}></span>
-                        <span className={`absolute -inset-1 rounded-full animate-pulse border-2 pointer-events-none ${
-                          hasDefects 
-                            ? 'border-rose-400' 
-                            : selectedWorkshopFilter !== 'all'
-                            ? 'border-amber-300'
-                            : 'border-cyan-300'
+                            ? 'bg-amber-500' 
+                            : 'bg-slate-400'
                         }`}></span>
                       </>
                     )}
 
-                    {/* Outer Glowing Badge Button */}
+                    {/* Outer Beacon Button */}
                     <button
                       type="button"
                       onClick={() => handleOpenDetails(compartment)}
-                      className={`relative w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-mono font-black text-xs shadow-2xl transition-all transform group-hover:scale-125 border-2 cursor-pointer focus:outline-none ${
+                      className={`relative w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-[11px] shadow-md transition-transform group-hover:scale-110 border-2 cursor-pointer focus:outline-none ${
                         hasDefects
-                          ? 'bg-rose-600 text-white border-white shadow-[0_0_25px_rgba(244,63,94,0.9)] animate-bounce'
+                          ? 'bg-rose-600 text-white border-white ring-2 ring-rose-300 animate-bounce'
                           : selectedWorkshopFilter !== 'all' && Boolean(assignedTask)
-                          ? 'bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 text-[#001733] border-white shadow-[0_0_25px_rgba(251,191,36,0.95)] ring-4 ring-amber-400/50'
+                          ? 'bg-slate-900 text-white border-white ring-2 ring-slate-400'
                           : isMyShopAssigned
-                          ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-[#001733] border-amber-200 shadow-amber-500/60'
-                          : 'bg-gradient-to-br from-cyan-500 to-blue-700 text-white border-cyan-200 shadow-cyan-500/50'
+                          ? 'bg-amber-500 text-white border-white ring-2 ring-amber-300'
+                          : 'bg-slate-800 text-white border-slate-200 hover:bg-slate-900'
                       }`}
                       aria-label={compartment.nameEn}
                     >
-                      <div className="flex items-center gap-0.5">
-                        {isSignaled && selectedWorkshopFilter !== 'all' && (
-                          <Radio className="h-3 w-3 animate-pulse text-[#001733]" />
-                        )}
-                        <span>{compartment.code.replace('SEC-', '')}</span>
-                      </div>
+                      <span>{compartment.code.replace('SEC-', '')}</span>
                     </button>
 
                     {/* "MY SHOP" Badge if user's own workshop */}
                     {isMyShopAssigned && (
-                      <span className="absolute -top-3.5 px-1.5 py-0.2 bg-amber-400 text-[#001733] rounded-full text-[8px] font-bold font-mono shadow-md uppercase pointer-events-none">
+                      <span className="absolute -top-3.5 px-1.5 py-0.2 bg-amber-500 text-white rounded-full text-[9px] font-bold shadow-xs uppercase pointer-events-none">
                         MY SHOP
                       </span>
                     )}
 
-                    {/* TACTICAL WORK SIGNAL CALLOUT (তার কাজ অনুযায়ী জাহাজে সিগনাল শো করবে) */}
+                    {/* Work Signal Callout */}
                     {selectedWorkshopFilter !== 'all' && assignedTask ? (
                       <div
                         onClick={() => handleOpenDetails(compartment)}
-                        className={`mt-1.5 px-2.5 py-1.5 rounded-xl text-left shadow-2xl border backdrop-blur-xl transition-all cursor-pointer group-hover:scale-110 min-w-[150px] max-w-[210px] ${
+                        className={`mt-1.5 px-2.5 py-1.5 rounded-xl text-left shadow-sm border transition-all cursor-pointer group-hover:scale-105 min-w-[150px] max-w-[210px] ${
                           hasDefects
-                            ? 'bg-rose-950/95 text-rose-100 border-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.6)]'
-                            : 'bg-[#001738]/95 text-white border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.45)] ring-1 ring-amber-400/50'
+                            ? 'bg-rose-50 border-rose-200 text-rose-900'
+                            : 'bg-white border-slate-200 text-slate-800 hover:border-slate-300'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-1 mb-0.5 border-b border-white/15 pb-0.5">
+                        <div className="flex items-center justify-between gap-1 mb-0.5 border-b border-slate-100 pb-0.5">
                           <div className="flex items-center gap-1">
-                            <span className={`w-2 h-2 rounded-full ${hasDefects ? 'bg-rose-400 animate-ping' : 'bg-emerald-400 animate-ping'}`}></span>
-                            <span className="text-[9px] font-mono font-black text-amber-300 uppercase tracking-tight">
-                              {selectedWorkshopFilter} SIGNAL
+                            <span className={`w-2 h-2 rounded-full ${hasDefects ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`}></span>
+                            <span className="text-[10px] font-bold text-slate-700 uppercase">
+                              {selectedWorkshopFilter}
                             </span>
                           </div>
-                          <span className="text-[8px] font-mono text-cyan-300 bg-cyan-950/80 px-1 rounded">
+                          <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 px-1 rounded">
                             {compartment.code}
                           </span>
                         </div>
-                        <div className="text-[10px] font-bold leading-snug text-white line-clamp-2">
+                        <div className="text-[11px] font-medium leading-snug text-slate-800 line-clamp-2">
                           {assignedTask.tasks[0]}
                         </div>
                         {hasDefects && (
-                          <div className="mt-1 text-[8px] font-mono font-bold text-rose-300 flex items-center gap-1 bg-rose-900/50 px-1 py-0.5 rounded">
-                            <AlertTriangle className="h-2.5 w-2.5 text-rose-400 animate-bounce" />
-                            <span>DEFECT ALERT IN SECTOR</span>
+                          <div className="mt-1 text-[9px] font-semibold text-rose-700 flex items-center gap-1 bg-rose-100/70 px-1.5 py-0.5 rounded">
+                            <AlertTriangle className="h-3 w-3 text-rose-600" />
+                            <span>ডিফেক্ট বিদ্যমান</span>
                           </div>
                         )}
                       </div>
@@ -896,12 +601,12 @@ export default function Ship3DViewer({
                       <button
                         type="button"
                         onClick={() => handleOpenDetails(compartment)}
-                        className={`mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold font-mono tracking-tight whitespace-nowrap shadow-md border backdrop-blur-md transition-all cursor-pointer ${
+                        className={`mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-tight whitespace-nowrap shadow-xs border transition-all cursor-pointer ${
                           hasDefects
-                            ? 'bg-rose-950/85 text-rose-200 border-rose-500/50'
+                            ? 'bg-rose-50 text-rose-700 border-rose-200'
                             : isMyShopAssigned
-                            ? 'bg-amber-950/85 text-amber-300 border-amber-400/50 ring-1 ring-amber-400/30'
-                            : 'bg-[#001738]/85 text-cyan-200 border-cyan-500/40'
+                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                         }`}
                       >
                         {compartment.nameEn.split(' ')[0]} {compartment.nameEn.split(' ')[1] || ''}
@@ -911,42 +616,42 @@ export default function Ship3DViewer({
 
                   {/* QUICK HOVER PREVIEW TOOLTIP */}
                   {isHovered && (
-                    <div className="absolute left-1/2 bottom-full mb-3 -translate-x-1/2 w-72 bg-[#001738]/95 backdrop-blur-2xl p-3.5 rounded-2xl border border-cyan-400/50 shadow-2xl text-white pointer-events-none z-50 animate-fade-in text-left">
-                      <div className="flex items-center justify-between border-b border-white/10 pb-1.5 mb-2">
+                    <div className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-72 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xl text-slate-800 pointer-events-none z-50 animate-fade-in text-left">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 mb-2">
                         <div className="flex items-center gap-1.5">
-                          <span className="px-1.5 py-0.5 rounded bg-amber-400 text-[#001733] text-[9px] font-mono font-black">
+                          <span className="px-1.5 py-0.5 rounded bg-slate-900 text-white text-[10px] font-bold">
                             {compartment.code}
                           </span>
-                          <span className="text-[10px] font-mono text-cyan-300 uppercase truncate">
+                          <span className="text-[11px] text-slate-500 uppercase">
                             {compartment.deckLevel}
                           </span>
                         </div>
                         {hasDefects ? (
-                          <span className="text-[9px] text-rose-400 font-bold bg-rose-950/80 px-1.5 py-0.5 rounded border border-rose-500/40">
-                            DEFECT RECORDED
+                          <span className="text-[10px] text-rose-700 font-semibold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                            ডিফেক্ট আছে
                           </span>
                         ) : (
-                          <span className="text-[9px] text-emerald-300 font-bold bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/40">
-                            OPERATIONAL
+                          <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                            সচল
                           </span>
                         )}
                       </div>
 
-                      <h4 className="text-xs font-black text-white">{compartment.nameEn}</h4>
-                      <p className="text-[10px] text-slate-300 mt-1 line-clamp-2">{compartment.overview}</p>
+                      <h4 className="text-xs font-bold text-slate-900">{compartment.nameEn}</h4>
+                      <p className="text-[11px] text-slate-600 mt-1 line-clamp-2">{compartment.overview}</p>
 
-                      <div className="mt-2.5 pt-2 border-t border-white/10">
-                        <span className="text-[9px] text-amber-300 font-mono font-bold uppercase block mb-1">
-                          ASSIGNED WORKSHOPS ({compartment.workshopsAssigned.length}):
+                      <div className="mt-2.5 pt-2 border-t border-slate-100">
+                        <span className="text-[10px] text-slate-500 font-semibold uppercase block mb-1">
+                          দায়িত্বপ্রাপ্ত ওয়ার্কশপ ({compartment.workshopsAssigned.length}):
                         </span>
                         <div className="flex flex-wrap gap-1">
                           {compartment.workshopsAssigned.map(w => (
                             <span 
                               key={w.workshopCode} 
-                              className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                              className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
                                 w.workshopCode === myWorkshopCode
-                                  ? 'bg-amber-400 text-[#001733]'
-                                  : 'bg-white/10 text-slate-200'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-slate-100 text-slate-700'
                               }`}
                             >
                               {w.workshopCode}
@@ -955,8 +660,8 @@ export default function Ship3DViewer({
                         </div>
                       </div>
 
-                      <div className="mt-2 text-[9px] text-cyan-300 font-mono text-center bg-cyan-950/60 py-1 rounded-lg border border-cyan-500/30">
-                        CLICK TO VIEW DOSSIER ➔
+                      <div className="mt-2 text-[10px] text-slate-500 font-medium text-center bg-slate-50 py-1 rounded-lg border border-slate-100">
+                        বিস্তারিত দেখতে ক্লিক করুন ➔
                       </div>
                     </div>
                   )}
@@ -967,25 +672,25 @@ export default function Ship3DViewer({
         </div>
 
         {/* Bottom Legend & Interactive Guide */}
-        <div className="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
+        <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4 text-xs">
           <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-slate-400 font-algerian font-bold uppercase">LEGEND:</span>
-            <div className="flex items-center gap-1.5 text-cyan-300">
-              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
-              <span className="font-algerian text-[11px] uppercase">STANDARD COMPARTMENT</span>
+            <span className="text-slate-500 font-semibold uppercase">নির্দেশিকা:</span>
+            <div className="flex items-center gap-1.5 text-slate-700">
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-800"></span>
+              <span>স্ট্যান্ডার্ড কম্পার্টমেন্ট</span>
             </div>
-            <div className="flex items-center gap-1.5 text-amber-300">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-              <span className="font-algerian text-[11px] uppercase">MY WORKSHOP ASSIGNED</span>
+            <div className="flex items-center gap-1.5 text-amber-800">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+              <span>লগইনকৃত ওয়ার্কশপ</span>
             </div>
-            <div className="flex items-center gap-1.5 text-rose-300">
+            <div className="flex items-center gap-1.5 text-rose-700">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-              <span className="font-algerian text-[11px] uppercase">DEFECT RECORDED</span>
+              <span>ডিফেক্ট বিদ্যমান</span>
             </div>
           </div>
 
-          <div className="text-[11px] text-slate-400 font-mono">
-            💡 Click any compartment beacon to view the complete technical dossier and active defect records.
+          <div className="text-xs text-slate-500">
+            কম্পার্টমেন্টের বিস্তারিত ও টেকনিক্যাল ডাটা দেখতে যেকোনো বিকনে ক্লিক করুন।
           </div>
         </div>
       </div>
@@ -995,35 +700,32 @@ export default function Ship3DViewer({
       ========================================================================= */}
       {activeCompartment && (
         <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-fade-in"
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-fade-in"
           onClick={() => setActiveCompartment(null)}
         >
           <div 
-            className="bg-[#00142e]/95 backdrop-blur-2xl border-2 border-cyan-400/50 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 text-white shadow-[0_25px_60px_-15px_rgba(0,10,35,0.98)] relative space-y-6"
+            className="bg-white border border-slate-200 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 sm:p-7 text-slate-800 shadow-xl relative space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Top Accent Line */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400"></div>
-
             {/* Top Anchor & Crest Header Section (হোম পেজের ডায়ালগ বক্সের উপরের অংশে নোঙর এর ছবি) */}
-            <div className="flex items-center justify-between bg-gradient-to-r from-[#001024] via-[#001c3d] to-[#001024] p-3 sm:p-4 rounded-2xl border border-amber-400/50 shadow-inner">
+            <div className="flex items-center justify-between bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200">
               <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl p-1 bg-gradient-to-br from-amber-400 via-yellow-400 to-amber-600 border-2 border-amber-300 shadow-xl shadow-amber-500/25 flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl p-1 bg-white border border-slate-200 shadow-xs flex items-center justify-center shrink-0">
                   <img 
                     src="/anchor.jpg" 
                     alt="Bangladesh Navy Crest Anchor" 
-                    className="w-full h-full object-contain rounded-xl bg-black" 
+                    className="w-full h-full object-contain rounded-lg" 
                   />
                 </div>
                 <div>
-                  <h4 className="text-sm sm:text-base md:text-lg font-algerian font-bold text-amber-300 tracking-wider uppercase">
+                  <h4 className="text-sm sm:text-base font-bold text-slate-900">
                     BANGLADESH NAVY DOCKYARD CHATTOGRAM
                   </h4>
-                  <p className="text-[11px] text-cyan-200 font-algerian font-bold tracking-wide uppercase">
-                    WARSHIP TECHNICAL INSPECTION & COMPARTMENT WORKSHOP DOSSIER
+                  <p className="text-xs text-slate-600 font-medium">
+                    যুদ্ধজাহাজ কারিগরি পরিদর্শন ও কম্পার্টমেন্ট ডজিয়ার
                   </p>
-                  <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-400/30 text-[9px] text-emerald-300 font-mono font-bold uppercase">
-                    SECURITY LEVEL: NAVAL COMMAND ARCHIVE
+                  <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-slate-200 text-[10px] text-slate-700 font-medium uppercase">
+                    NAVAL ARCHIVE & MAINTENANCE
                   </span>
                 </div>
               </div>
@@ -1032,29 +734,29 @@ export default function Ship3DViewer({
               <button
                 type="button"
                 onClick={() => setActiveCompartment(null)}
-                className="p-2.5 rounded-xl bg-white/10 hover:bg-rose-600/80 text-white transition-all cursor-pointer shrink-0 border border-white/15"
-                title="CLOSE"
+                className="p-2 rounded-xl bg-slate-200/80 hover:bg-slate-300 text-slate-700 transition-all cursor-pointer shrink-0"
+                title="বন্ধ করুন"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Header of the Compartment */}
-            <div className="flex items-start justify-between gap-4 border-b border-white/15 pb-4">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-3.5 min-w-0">
-                <div className="p-3.5 bg-gradient-to-br from-amber-400 to-amber-600 text-[#001733] rounded-2xl font-mono font-black text-lg shadow-lg shadow-amber-500/20 shrink-0">
+                <div className="w-11 h-11 bg-slate-900 text-white rounded-xl font-bold text-base flex items-center justify-center shadow-xs shrink-0">
                   {activeCompartment.code}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded border border-amber-400/30 uppercase">
+                    <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">
                       {activeCompartment.deckLevel}
                     </span>
-                    <span className="text-[10px] text-cyan-200 font-mono">
-                      {selectedShip}
+                    <span className="text-xs text-slate-500 font-medium">
+                      জাহাজ: {selectedShip}
                     </span>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-algerian font-bold text-white tracking-wide mt-1 truncate uppercase">
+                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 mt-1 truncate">
                     {activeCompartment.nameEn}
                   </h3>
                 </div>
@@ -1063,24 +765,24 @@ export default function Ship3DViewer({
 
             {/* Overview & Technical Specs Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2 bg-white/5 p-4 rounded-2xl border border-white/10">
-                <h4 className="text-xs font-algerian font-bold text-amber-300 uppercase mb-1.5 flex items-center gap-1.5">
-                  <Info className="h-3.5 w-3.5" />
-                  COMPARTMENT OVERVIEW & FUNCTION
+              <div className="md:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <h4 className="text-xs font-bold text-slate-900 uppercase mb-1.5 flex items-center gap-1.5">
+                  <Info className="h-3.5 w-3.5 text-slate-600" />
+                  কম্পার্টমেন্ট বিবরণ ও ভূমিকা (Overview)
                 </h4>
-                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
                   {activeCompartment.overview}
                 </p>
               </div>
 
-              <div className="bg-cyan-950/40 p-4 rounded-2xl border border-cyan-500/30 space-y-2">
-                <h4 className="text-xs font-algerian font-bold text-cyan-300 uppercase mb-1">
-                  TECHNICAL SPECIFICATIONS
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                <h4 className="text-xs font-bold text-slate-900 uppercase mb-1">
+                  কারিগরি বিবরণ (Specifications)
                 </h4>
                 {activeCompartment.specifications.map((spec, idx) => (
-                  <div key={idx} className="text-xs border-b border-white/10 pb-1 last:border-0 last:pb-0">
-                    <span className="text-slate-400 block text-[10px] font-algerian uppercase">{spec.label}</span>
-                    <span className="text-white font-bold font-mono">{spec.value}</span>
+                  <div key={idx} className="text-xs border-b border-slate-200/80 pb-1.5 last:border-0 last:pb-0">
+                    <span className="text-slate-500 block text-[11px]">{spec.label}</span>
+                    <span className="text-slate-900 font-semibold">{spec.value}</span>
                   </div>
                 ))}
               </div>
@@ -1089,18 +791,15 @@ export default function Ship3DViewer({
             {/* =========================================================================
                 RESPONSIBLE WORKSHOPS & DETAILED TASKS
             ========================================================================= */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-algerian font-bold text-amber-300 tracking-wider uppercase flex items-center gap-2">
-                  <Wrench className="h-4 w-4 text-amber-400" />
-                  <span>RESPONSIBLE WORKSHOPS & TECHNICAL TASKS ({activeCompartment.workshopsAssigned.length} WORKSHOPS)</span>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Wrench className="h-4 w-4 text-slate-600" />
+                  <span>দায়িত্বপ্রাপ্ত ওয়ার্কশপ ও কাজের পরিধি ({activeCompartment.workshopsAssigned.length} টি শপ)</span>
                 </h4>
-                <span className="text-[10px] text-cyan-200 font-algerian font-bold uppercase">
-                  NAVAL MAINTENANCE PROTOCOL
-                </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {[...activeCompartment.workshopsAssigned].sort((a, b) => {
                   if (a.workshopCode === selectedWorkshopFilter) return -1;
                   if (b.workshopCode === selectedWorkshopFilter) return 1;
@@ -1113,64 +812,64 @@ export default function Ship3DViewer({
                   return (
                     <div 
                       key={wsItem.workshopCode} 
-                      className={`p-4 rounded-2xl border transition-all ${
+                      className={`p-4 rounded-xl border transition-all ${
                         isSignaledShop
-                          ? 'bg-amber-500/25 border-amber-400 shadow-xl ring-2 ring-amber-400/70'
+                          ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-300'
                           : isUserShop 
-                          ? 'bg-amber-500/15 border-amber-400/60 shadow-lg ring-1 ring-amber-400/40' 
-                          : 'bg-[#001a3d]/80 border-cyan-500/30 hover:border-cyan-400/60'
+                          ? 'bg-amber-50/50 border-amber-200' 
+                          : 'bg-white border-slate-200 hover:border-slate-300'
                       }`}
                     >
                       {/* Workshop Header */}
-                      <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-2.5">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-xs font-mono font-black ${
-                            isSignaledShop || isUserShop ? 'bg-amber-400 text-[#001733]' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                            isSignaledShop || isUserShop ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-800'
                           }`}>
                             {wsItem.workshopCode}
                           </span>
                           <div>
-                            <h5 className="text-xs sm:text-sm font-algerian font-bold text-white leading-tight uppercase">
+                            <h5 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
                               {wsItem.workshopNameEn || wsItem.workshopNameBn}
                             </h5>
-                            <span className="text-[10px] text-amber-300 font-mono">
-                              SECTION: {wsItem.category}
+                            <span className="text-[11px] text-slate-500">
+                              বিভাগ: {wsItem.category}
                             </span>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
                           {isSignaledShop && (
-                            <span className="px-2 py-0.5 bg-amber-400 text-[#001733] font-algerian font-bold text-[9px] rounded-full uppercase flex items-center gap-1 shadow-md">
-                              <Radio className="h-2.5 w-2.5 animate-pulse" />
-                              SIGNALED SHOP
+                            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-semibold text-[10px] rounded-full flex items-center gap-1">
+                              <Radio className="h-2.5 w-2.5" />
+                              সিগনাল
                             </span>
                           )}
                           {isUserShop && !isSignaledShop && (
-                            <span className="px-2 py-0.5 bg-amber-400 text-[#001733] font-algerian font-bold text-[9px] rounded-full uppercase">
-                              MY WORKSHOP
+                            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-semibold text-[10px] rounded-full">
+                              আমার শপ
                             </span>
                           )}
                         </div>
                       </div>
 
                       {/* Workshop OIC & Intercom */}
-                      <div className="flex items-center justify-between text-[10px] text-slate-300 font-mono mb-3 bg-black/30 px-2.5 py-1 rounded-lg">
+                      <div className="flex items-center justify-between text-xs text-slate-600 mb-2.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
                         <span className="truncate">OIC: {wsItem.oicRankAndName}</span>
-                        <span className="text-amber-300 font-bold shrink-0 flex items-center gap-1">
-                          <Phone className="h-2.5 w-2.5" /> Ext: {wsItem.phoneExt}
+                        <span className="text-slate-800 font-semibold shrink-0 flex items-center gap-1">
+                          <Phone className="h-3 w-3 text-slate-400" /> Ext: {wsItem.phoneExt}
                         </span>
                       </div>
 
                       {/* Specific Tasks List */}
-                      <div className="space-y-1.5">
-                        <span className="text-[10px] text-amber-300 font-algerian font-bold uppercase tracking-wide block">
-                          SPECIFIC WORK SCOPE:
+                      <div className="space-y-1">
+                        <span className="text-[11px] text-slate-500 font-semibold uppercase block">
+                          কাজের পরিধি (Scope of Work):
                         </span>
-                        <ul className="space-y-1.5">
+                        <ul className="space-y-1">
                           {wsItem.tasks.map((task, tIdx) => (
-                            <li key={tIdx} className="text-xs text-slate-200 flex items-start gap-2">
-                              <span className="text-cyan-400 mt-0.5 shrink-0">❖</span>
+                            <li key={tIdx} className="text-xs text-slate-700 flex items-start gap-1.5">
+                              <span className="text-slate-400 mt-0.5 shrink-0">•</span>
                               <span>{task}</span>
                             </li>
                           ))}
@@ -1185,41 +884,41 @@ export default function Ship3DViewer({
             {/* =========================================================================
                 ACTIVE DEFECTS FOR THIS SECTION IN THE SYSTEM DATABASE
             ========================================================================= */}
-            <div className="bg-black/30 p-4 sm:p-5 rounded-2xl border border-white/15 space-y-3">
+            <div className="bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-200 space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-algerian font-bold text-white uppercase flex items-center gap-2">
-                  <AlertTriangle className="h-3.5 w-3.5 text-rose-400" />
-                  <span>ACTIVE COMPARTMENT DEFECT LOG ({getCompartmentDefects(activeCompartment).length})</span>
+                <h4 className="text-xs font-bold text-slate-900 uppercase flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-slate-600" />
+                  <span>কম্পার্টমেন্ট ডিফেক্ট লগ ({getCompartmentDefects(activeCompartment).length})</span>
                 </h4>
-                <span className="text-[10px] text-amber-300 font-algerian font-bold uppercase">
-                  WARSHIP: {selectedShip}
+                <span className="text-xs text-slate-500">
+                  যুদ্ধজাহাজ: {selectedShip}
                 </span>
               </div>
 
               {getCompartmentDefects(activeCompartment).length === 0 ? (
-                <div className="flex items-center gap-3 bg-emerald-950/40 border border-emerald-500/30 p-3.5 rounded-xl text-emerald-300 text-xs font-algerian font-bold uppercase tracking-wider">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-                  <span>ALL SYSTEMS FULLY OPERATIONAL IN THIS COMPARTMENT // NO ACTIVE DEFECTS</span>
+                <div className="flex items-center gap-3 bg-white border border-slate-200 p-3.5 rounded-xl text-slate-700 text-xs">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                  <span>এই কম্পার্টমেন্টে বর্তমানে কোনো ডিফেক্ট নেই। সকল সিস্টেম সচল।</span>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {getCompartmentDefects(activeCompartment).map(def => (
                     <div 
                       key={def.id} 
-                      className="p-3.5 bg-white/5 border border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                      className="p-3.5 bg-white border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs"
                     >
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2 font-mono">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-algerian font-bold uppercase ${
-                            def.status === 'Solved' ? 'bg-emerald-500/30 text-emerald-300' : 'bg-rose-500/30 text-rose-300'
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            def.status === 'Solved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
                           }`}>
-                            {def.status === 'Solved' ? 'SOLVED' : 'PENDING'}
+                            {def.status === 'Solved' ? 'সমাধানকৃত' : 'চলমান'}
                           </span>
-                          <span className="text-slate-400 text-[10px]">{def.defectDate}</span>
-                          <span className="text-amber-300 text-[10px] font-algerian font-bold uppercase">WORKSHOP: {def.workshop || 'ASSIGNED'}</span>
+                          <span className="text-slate-400 text-[11px]">{def.defectDate}</span>
+                          <span className="text-slate-600 text-[11px] font-medium">ওয়ার্কশপ: {def.workshop || 'অ্যাসাইনড'}</span>
                         </div>
-                        <p className="text-slate-200 mt-1.5 font-medium">
-                          {def.defectDescription || 'Defect record logged in registry.'}
+                        <p className="text-slate-800 mt-1 font-medium">
+                          {def.defectDescription || 'ডিফেক্ট বিবরণ রেজিস্ট্রি করা হয়েছে।'}
                         </p>
                       </div>
 
@@ -1228,7 +927,7 @@ export default function Ship3DViewer({
                           src={def.defectImage} 
                           alt="Defect" 
                           referrerPolicy="no-referrer"
-                          className="w-12 h-12 rounded-lg object-cover border border-white/20 shrink-0" 
+                          className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0" 
                         />
                       )}
                     </div>
@@ -1238,9 +937,9 @@ export default function Ship3DViewer({
             </div>
 
             {/* Action Buttons in Footer */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/15">
-              <div className="text-xs text-slate-300 font-algerian uppercase">
-                COMPARTMENT CODE: <strong className="text-amber-300">{activeCompartment.code}</strong> // {activeCompartment.locationTag}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
+              <div className="text-xs text-slate-500">
+                কম্পার্টমেন্ট কোড: <strong className="text-slate-800">{activeCompartment.code}</strong> ({activeCompartment.locationTag})
               </div>
 
               <div className="flex items-center gap-3">
@@ -1252,19 +951,19 @@ export default function Ship3DViewer({
                       onNavigateToEntry(activeCompartment.locationTag, firstWs);
                       setActiveCompartment(null);
                     }}
-                    className="px-4 py-2.5 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#001733] font-algerian font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 flex items-center gap-2 cursor-pointer transition-all active:scale-95 uppercase tracking-wider"
+                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition-all shadow-xs"
                   >
                     <Wrench className="h-3.5 w-3.5" />
-                    <span>LOG DEFECT IN THIS SECTION</span>
+                    <span>নতুন ডিফেক্ট এন্ট্রি করুন</span>
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={() => setActiveCompartment(null)}
-                  className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-algerian font-bold text-xs rounded-xl transition-all cursor-pointer uppercase tracking-wider border border-white/15"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-all cursor-pointer"
                 >
-                  CLOSE
+                  বন্ধ করুন
                 </button>
               </div>
             </div>

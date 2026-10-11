@@ -32,7 +32,7 @@ import ProductionDepartment from './components/ProductionDepartment';
 import patrolShipBg from './assets/images/patrol_ship_157.jpg';
 import navyFleetBg from './assets/images/navy-2.webp';
 
-import { Defect, UserProfile, Workshop, DockyardConfig, AuthSession, NavTab, AdminSubTab } from './types';
+import { Defect, UserProfile, Workshop, DockyardConfig, AuthSession, NavTab, AdminSubTab, ProductionUnitItem } from './types';
 import { 
   DEFAULT_SHIPS, 
   DEFAULT_LOCATIONS, 
@@ -40,6 +40,7 @@ import {
   DEFAULT_WORKSHOPS, 
   DEFAULT_DOCKYARD_CONFIG 
 } from './constants';
+import { DEFAULT_PRODUCTION_UNITS } from './data/productionUnits';
 import { supabase } from './lib/supabase';
 import { supabaseService, mapDefectFromDb } from './services/supabaseService';
 
@@ -249,6 +250,34 @@ export default function App() {
     workshop: ''
   });
 
+  // Production Department hierarchical units state
+  const [productionUnits, setProductionUnits] = useState<ProductionUnitItem[]>(() => {
+    try {
+      const stored = localStorage.getItem('defect_tracker_production_units');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Verify cached version contains WS-01 Rigging Shop; if outdated, refresh to DEFAULT_PRODUCTION_UNITS
+          const hasRiggingShop = parsed.some((u: ProductionUnitItem) => u.workshopCode === 'WS-01' && u.titleEn?.toLowerCase().includes('rigging'));
+          if (hasRiggingShop) return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse cached production units', e);
+    }
+    return DEFAULT_PRODUCTION_UNITS;
+  });
+
+  const handleUpdateProductionUnits = async (newUnits: ProductionUnitItem[]) => {
+    setProductionUnits(newUnits);
+    localStorage.setItem('defect_tracker_production_units', JSON.stringify(newUnits));
+    try {
+      await supabaseService.saveProductionUnits(newUnits);
+    } catch (err) {
+      console.warn('Failed to save production units to Supabase', err);
+    }
+  };
+
   // Current system time for Navy header clock
   const [systemTime, setSystemTime] = useState<string>('');
 
@@ -310,13 +339,14 @@ export default function App() {
       }
 
       // If tables are ready, load data from Supabase
-      const [remoteDefects, remoteWorkshops, remoteShips, remoteLocations, remoteConfig, remoteProfile] = await Promise.all([
+      const [remoteDefects, remoteWorkshops, remoteShips, remoteLocations, remoteConfig, remoteProfile, remoteUnits] = await Promise.all([
         supabaseService.fetchDefects(),
         supabaseService.fetchWorkshops(),
         supabaseService.fetchShips(),
         supabaseService.fetchLocations(),
         supabaseService.fetchDockyardConfig(),
-        supabaseService.fetchUserProfile()
+        supabaseService.fetchUserProfile(),
+        supabaseService.fetchProductionUnits()
       ]);
 
       if (remoteDefects && remoteDefects.length > 0) {
@@ -361,6 +391,20 @@ export default function App() {
         localStorage.setItem('defect_tracker_profile', JSON.stringify(remoteProfile));
       } else {
         supabaseService.saveUserProfile(profile);
+      }
+
+      if (remoteUnits && remoteUnits.length > 0) {
+        const hasRiggingShop = remoteUnits.some((u: ProductionUnitItem) => u.workshopCode === 'WS-01' && u.titleEn?.toLowerCase().includes('rigging'));
+        if (hasRiggingShop) {
+          setProductionUnits(remoteUnits);
+          localStorage.setItem('defect_tracker_production_units', JSON.stringify(remoteUnits));
+        } else {
+          setProductionUnits(DEFAULT_PRODUCTION_UNITS);
+          localStorage.setItem('defect_tracker_production_units', JSON.stringify(DEFAULT_PRODUCTION_UNITS));
+          supabaseService.saveProductionUnits(DEFAULT_PRODUCTION_UNITS);
+        }
+      } else if (productionUnits.length > 0) {
+        supabaseService.saveProductionUnits(productionUnits);
       }
 
       setSupabaseSyncStatus({
@@ -579,17 +623,54 @@ export default function App() {
     setShowLogoutModal(false);
   };
 
-  const handleSaveProfileModal = (newProfile: UserProfile, newOfficerName?: string) => {
+  const handleSaveProfileModal = async (newProfile: UserProfile, newOfficerName?: string, newRank?: string, newPhone?: string) => {
     setProfile(newProfile);
     localStorage.setItem('defect_tracker_profile', JSON.stringify(newProfile));
 
-    if (authSession && newOfficerName) {
+    if (authSession) {
       const updatedSession: AuthSession = {
         ...authSession,
-        officerName: newOfficerName
+        officerName: newOfficerName || authSession.officerName,
+        officerRank: newRank || authSession.officerRank,
+        photo: newProfile.avatar || authSession.photo
       };
       setAuthSession(updatedSession);
       localStorage.setItem('defect_tracker_auth', JSON.stringify(updatedSession));
+
+      // If logged in as a workshop user, update the workshop data in the master workshops state
+      if (authSession.workshopId) {
+        let updatedWs: Workshop | null = null;
+        const updatedWorkshops = workshops.map(ws => {
+          if (ws.id === authSession.workshopId) {
+            updatedWs = {
+              ...ws,
+              oicName: newOfficerName || ws.oicName,
+              oicRank: newRank || ws.oicRank,
+              phoneExt: newPhone || ws.phoneExt,
+              photo: newProfile.avatar || ws.photo
+            };
+            return updatedWs;
+          }
+          return ws;
+        });
+
+        setWorkshops(updatedWorkshops);
+        localStorage.setItem('defect_tracker_workshops', JSON.stringify(updatedWorkshops));
+
+        if (updatedWs) {
+          try {
+            await supabaseService.upsertWorkshop(updatedWs);
+          } catch (err) {
+            console.warn('Failed to upsert workshop profile to Supabase', err);
+          }
+        }
+      }
+    }
+
+    try {
+      await supabaseService.saveUserProfile(newProfile);
+    } catch (err) {
+      console.warn('Failed to save user profile to Supabase', err);
     }
   };
 
@@ -699,6 +780,7 @@ export default function App() {
         setAdminSubTab={setAdminSubTab}
         profile={profile} 
         authSession={authSession}
+        workshops={workshops}
         dockyardConfig={dockyardConfig}
         workshopsCount={workshops.length}
         shipsCount={ships.length}
@@ -709,30 +791,13 @@ export default function App() {
         onCloseMobile={() => setIsMobileNavOpen(false)}
       />
 
-      {/* 2. MAIN CORE LAYOUT PANEL */}
-      <main id="main-content-area" className="flex-1 flex flex-col h-screen overflow-hidden relative bg-[#FCF4E2] w-full min-w-0">
+      {/* 2. MAIN CORE LAYOUT PANEL - Cream (#FFFDD0) & Bangladesh Naval Green (#006A4E) Theme */}
+      <main id="main-content-area" className="flex-1 flex flex-col h-screen overflow-hidden relative bg-gradient-to-br from-[#FFFEEA] via-[#FAF7DE] to-[#F5F1C9] w-full min-w-0">
         
-        {/* Unified Maritime Parchment Background across all pages (ইউজার ড্যাসবোর্ড সহ সকল পেজ একই ব্যাকগ্রাউন্ড) */}
+        {/* Harmonious Bangladesh Naval Green Subtle Glow Overlay */}
         <div 
-          className="absolute inset-0 z-0 pointer-events-none transition-all duration-700 bg-[#FCF4E2]"
-          style={{
-            backgroundColor: '#FCF4E2',
-            backgroundImage: `
-              radial-gradient(#d6c7ab 1.1px, transparent 1.1px),
-              linear-gradient(to bottom, #FCF4E2, #f7ebd5)
-            `,
-            backgroundSize: '28px 28px, 100% 100%'
-          }}
-        >
-          <div 
-            className="absolute inset-0 bg-cover bg-no-repeat opacity-[0.07] mix-blend-multiply transition-opacity duration-700 pointer-events-none"
-            style={{
-              backgroundImage: `url('${navyFleetBg}')`,
-              backgroundPosition: 'center 40%',
-              backgroundAttachment: 'fixed',
-            }}
-          />
-        </div>
+          className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(0,106,78,0.07),rgba(255,253,208,0))]"
+        />
 
         {/* Navy Header Panel - Admin & User Header */}
         {authSession.role === 'admin' ? (
@@ -873,7 +938,7 @@ export default function App() {
             </div>
             <div className="overflow-hidden whitespace-nowrap w-full ml-3 flex-1 relative">
               <div className="animate-marquee-rtl font-algerian font-black text-amber-300 text-sm sm:text-base md:text-lg tracking-widest uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                {dockyardConfig.marqueeText || '⚓ WELCOME TO AREA SUPERINTENDENT DOCKYARD ⚓ — BANGLADESH NAVY DOCKYARD CHATTOGRAM TECHNICAL DEFECT TRACKING & FLEET MAINTENANCE COMMAND — ALL 27 WORKSHOPS OPERATIONAL READINESS 100% ⚓'}
+                {dockyardConfig.marqueeText || '⚓ WELCOME TO AREA SUPERINTENDENT DOCKYARD ⚓ — BANGLADESH NAVY DOCKYARD CHATTOGRAM — TECHNICAL DEFECT TRACKING & FLEET MAINTENANCE COMMAND ⚓'}
               </div>
             </div>
           </div>
@@ -885,8 +950,8 @@ export default function App() {
           className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-8 relative bg-transparent transition-colors duration-500 text-slate-800 custom-scrollbar"
         >
           
-          {/* Subtle Decorative Maritime Compass Watermark */}
-          <div className="fixed bottom-12 right-12 pointer-events-none opacity-[0.035] text-[#002147]">
+          {/* Subtle Decorative Maritime Compass Watermark in Bangladesh Naval Green (#006A4E) */}
+          <div className="fixed bottom-12 right-12 pointer-events-none opacity-[0.045] text-[#006A4E]">
             <Compass className="w-80 h-80 stroke-[0.8]" />
           </div>
 
@@ -983,6 +1048,9 @@ export default function App() {
                   workshops={workshops}
                   defects={defects}
                   dockyardConfig={dockyardConfig}
+                  isAdmin={isAdmin}
+                  productionUnits={productionUnits}
+                  onUpdateProductionUnits={handleUpdateProductionUnits}
                   onNavigateToEntry={(loc, ws) => {
                     setActiveTab('entry');
                   }}
@@ -1090,6 +1158,7 @@ export default function App() {
         onClose={() => setShowProfileModal(false)}
         profile={profile}
         authSession={authSession}
+        workshops={workshops}
         onSaveProfile={handleSaveProfileModal}
       />
     </div>

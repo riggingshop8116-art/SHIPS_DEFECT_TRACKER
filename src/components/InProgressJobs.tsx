@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
   Hourglass, 
   Search, 
@@ -8,15 +8,13 @@ import {
   Building2, 
   Calendar, 
   CheckCircle2, 
-  AlertTriangle, 
   Upload, 
   X, 
   Sparkles, 
   Image as ImageIcon,
-  ArrowRight,
   PlusCircle,
-  FileCheck2,
-  Maximize2
+  Maximize2,
+  Anchor
 } from 'lucide-react';
 import { Defect, Workshop, AuthSession } from '../types';
 import { supabaseService } from '../services/supabaseService';
@@ -56,9 +54,24 @@ export default function InProgressJobs({
   // Active Defect being solved
   const [solvingDefect, setSolvingDefect] = useState<Defect | null>(null);
   const [solutionDate, setSolutionDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const solutionDateInputRef = useRef<HTMLInputElement>(null);
   const [solutionDesc, setSolutionDesc] = useState<string>('');
   const [solutionImage, setSolutionImage] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const safeOpenDatePicker = (input: HTMLInputElement | null) => {
+    if (!input) return;
+    try {
+      if (typeof input.showPicker === 'function') {
+        input.showPicker();
+        return;
+      }
+    } catch {}
+    input.focus();
+    try {
+      input.click();
+    } catch {}
+  };
 
   // Image preview modal
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -66,29 +79,20 @@ export default function InProgressJobs({
   // Success Notification
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Quick preset solution photos for convenience
   const PRESET_SOLUTION_PHOTOS = [
-    {
-      name: 'Engine Overhauled',
-      url: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&auto=format&fit=crop&q=60'
-    },
-    {
-      name: 'Generator Repaired',
-      url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&auto=format&fit=crop&q=60'
-    },
-    {
-      name: 'Pipe Sealed',
-      url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&auto=format&fit=crop&q=60'
-    }
+    { name: 'Overhauled Pump', url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80' },
+    { name: 'Rebuilt Motor', url: 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=800&auto=format&fit=crop&q=80' },
+    { name: 'Flange Weld', url: 'https://images.unsplash.com/photo-1504917599217-d4dc5ebe6122?w=800&auto=format&fit=crop&q=80' }
   ];
 
-  // In-progress defects (ONLY pending / unsolved defects)
+  // In-Progress Defects Filtered
   const inProgressDefects = useMemo(() => {
     return defects.filter(d => {
-      // Must NOT be solved
-      if (d.status === 'Solved') return false;
+      // Must not be solved
+      const isSolved = d.status?.toLowerCase() === 'solved' || Boolean(d.solutionDate);
+      if (isSolved) return false;
 
-      // Strict Per-Shop Isolation for workshop users
+      // Workshop-user isolation
       if (isWorkshopUser && authSession?.workshopCode) {
         const userWsCode = authSession.workshopCode.toUpperCase();
         const userWsNameEn = (authSession.workshopNameEn || '').toLowerCase();
@@ -101,30 +105,31 @@ export default function InProgressJobs({
                           (userWsNameBn && d.workshop.includes(userWsNameBn))
                         ));
         if (!matchWs) return false;
-      } else if (filterWorkshop !== 'all') {
-        const matchWs = (d.workshopCode && d.workshopCode.toUpperCase() === filterWorkshop.toUpperCase()) ||
+      } else if (filterWorkshop && filterWorkshop !== 'all') {
+        const matchWs = (d.workshopCode && d.workshopCode.toLowerCase() === filterWorkshop.toLowerCase()) ||
                         (d.workshop && d.workshop.toLowerCase().includes(filterWorkshop.toLowerCase()));
         if (!matchWs) return false;
       }
 
-      // Ship filter
-      if (filterShip && d.shipName !== filterShip) return false;
+      // Ship Filter
+      if (filterShip && filterShip !== 'all' && d.shipName !== filterShip) {
+        return false;
+      }
 
-      // Search keyword filter
+      // Keyword Search
       if (searchKeyword.trim()) {
-        const q = searchKeyword.toLowerCase();
-        const inShip = d.shipName?.toLowerCase().includes(q);
-        const inLoc = d.location?.toLowerCase().includes(q);
-        const inDesc = d.defectDescription?.toLowerCase().includes(q);
-        const inWs = d.workshop?.toLowerCase().includes(q) || d.workshopCode?.toLowerCase().includes(q);
-        if (!inShip && !inLoc && !inDesc && !inWs) return false;
+        const kw = searchKeyword.toLowerCase();
+        const matchShip = d.shipName.toLowerCase().includes(kw);
+        const matchLoc = d.location.toLowerCase().includes(kw);
+        const matchDesc = (d.defectDescription || '').toLowerCase().includes(kw);
+        const matchWs = (d.workshop || '').toLowerCase().includes(kw) || (d.workshopCode || '').toLowerCase().includes(kw);
+        if (!matchShip && !matchLoc && !matchDesc && !matchWs) return false;
       }
 
       return true;
     });
   }, [defects, isWorkshopUser, authSession, filterWorkshop, filterShip, searchKeyword]);
 
-  // Handle opening solution modal
   const handleOpenSolveModal = (defect: Defect) => {
     setSolvingDefect(defect);
     setSolutionDate(new Date().toISOString().split('T')[0]);
@@ -132,109 +137,120 @@ export default function InProgressJobs({
     setSolutionImage('');
   };
 
-  // Handle image upload from file to Supabase Storage with fallback
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be under 5MB');
-        return;
-      }
-      try {
-        const { url } = await supabaseService.uploadMediaToStorage(file, 'solutions');
-        setSolutionImage(url);
-      } catch (err) {
-        console.error('Solution image upload error:', err);
-      }
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Photo size must be less than 10MB.');
+      return;
+    }
+
+    try {
+      const { url } = await supabaseService.uploadMediaToStorage(file, 'solutions');
+      setSolutionImage(url);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => setSolutionImage(reader.result as string);
+      reader.readAsDataURL(file);
     }
   };
 
-  // Submit resolution
-  const handleConfirmSolution = (e: React.FormEvent) => {
+  const handleCompleteSolve = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!solvingDefect) return;
 
+    if (!solutionDesc.trim()) {
+      alert('Please enter action taken/remedial details.');
+      return;
+    }
+
     setIsSubmitting(true);
+    try {
+      await onUpdateStatus(
+        solvingDefect.id,
+        solutionDate || new Date().toISOString().split('T')[0],
+        solutionDesc,
+        solutionImage || undefined
+      );
 
-    const desc = solutionDesc.trim() || 'ডিফেক্টটির প্রয়োজনীয় মেরামত ও পরীক্ষণ সম্পন্ন হয়েছে এবং তা স্বাভাবিকভাবে কার্যক্ষম।';
-    const date = solutionDate || new Date().toISOString().split('T')[0];
-
-    onUpdateStatus(solvingDefect.id, date, desc, solutionImage);
-
-    setIsSubmitting(false);
-    setSolvingDefect(null);
-
-    // Show confirmation toast
-    setToastMessage(`✅ ${solvingDefect.shipName} (${solvingDefect.location}) এর সমাধান সফলভাবে সংরক্ষণ করা হয়েছে এবং ইন প্রগ্রেস তালিকা থেকে সরানো হয়েছে!`);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 4500);
+      setToastMessage(`Job for ${solvingDefect.shipName} successfully marked as Solved.`);
+      setTimeout(() => setToastMessage(null), 4000);
+      setSolvingDefect(null);
+    } catch (err: any) {
+      alert('Failed to update defect: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div id="in-progress-jobs-panel" className="w-full max-w-7xl mx-auto space-y-6">
+    <div id="in-progress-jobs-view" className="w-full max-w-7xl mx-auto space-y-6 text-slate-800 pb-8">
       
-      {/* Toast Notification */}
+      {/* Toast */}
       {toastMessage && (
-        <div className="fixed top-24 right-6 z-50 bg-[#001738] border-2 border-emerald-400 text-emerald-300 px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
-          <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-          <span className="text-xs sm:text-sm font-bold font-sans">{toastMessage}</span>
-          <button 
-            type="button" 
-            onClick={() => setToastMessage(null)}
-            className="text-slate-400 hover:text-white ml-2"
-          >
-            <X className="h-4 w-4" />
-          </button>
+        <div className="p-4 rounded-xl flex items-center gap-3 border shadow-sm bg-emerald-50 text-emerald-800 border-emerald-200 animate-fade-in">
+          <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+          <span className="text-xs sm:text-sm font-semibold">{toastMessage}</span>
         </div>
       )}
 
-      {/* Top Banner */}
-      <div className="bg-[#001738]/95 backdrop-blur-xl p-6 sm:p-7 rounded-3xl border-l-8 border-amber-400 border border-amber-500/35 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-2xl">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="px-3 py-0.5 rounded-full text-[10px] font-algerian font-bold bg-amber-500/20 text-amber-300 border border-amber-400/40 uppercase flex items-center gap-1">
-              <Hourglass className="h-3 w-3 text-amber-400 animate-spin-slow" />
-              <span>ACTIVE UNRESOLVED WORK ORDERS</span>
+      {/* Top Banner - Bangladesh Naval Green (#006A4E) & Cream (#FFFDD0) Design */}
+      <div className="bg-gradient-to-r from-[#006A4E] via-[#355E3B] to-[#006A4E] text-[#FFFDD0] border-2 border-[#FFFDD0]/60 p-5 sm:p-6 rounded-2xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
+        {/* Decorative naval anchor watermark */}
+        <div className="absolute right-3 -bottom-6 opacity-10 pointer-events-none text-[#FFFDD0]">
+          <Anchor className="h-44 w-44" />
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <span className="px-3 py-1 rounded-md text-[11px] font-bold bg-[#FFFDD0] text-[#006A4E] font-mono tracking-wider shadow-xs flex items-center gap-1.5">
+              <Hourglass className="h-3.5 w-3.5 text-[#006A4E]" />
+              <span>চলমান কার্যাবলী • ACTIVE WORK ORDERS</span>
             </span>
-            <span className="text-amber-400 text-xs">•</span>
-            <span className="text-xs text-amber-200/90 font-mono">BND FLEET MAINTENANCE</span>
+            <span className="px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#004d38]/80 text-[#FFFDD0] border border-[#FFFDD0]/40 font-mono shadow-xs">
+              BND FLEET MAINTENANCE
+            </span>
           </div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-algerian font-extrabold flex items-center gap-3 text-white uppercase tracking-wider">
-            <Wrench className="h-7 w-7 text-amber-400" />
-            <span>IN PROGRESS JOBS (ইন প্রগ্রেস জব)</span>
+
+          <h2 className="text-xl sm:text-2xl font-black font-algerian flex items-center gap-2.5 text-[#FFFDD0] tracking-wider">
+            <div className="p-2 rounded-xl bg-[#FFFDD0] text-[#006A4E] shadow-xs">
+              <Wrench className="h-5 w-5 text-[#006A4E]" />
+            </div>
+            <span>ইন প্রোগ্রেস জবস • IN PROGRESS JOBS</span>
           </h2>
-          <p className="text-slate-200 text-xs sm:text-sm mt-1">
-            যে ডিফেক্টগুলো এন্ট্রি করা হয়েছে কিন্তু এখনো সমাধান করা হয়নি তা এখানে তালিকাভুক্ত রয়েছে। সমাধান যুক্ত করার সাথে সাথে ডিফেক্টটি এই তালিকা থেকে অপসারিত হয়ে আর্কাইভে যুক্ত হবে।
+
+          <p className="text-[#FFFDD0]/90 text-xs sm:text-sm mt-1.5 max-w-2xl leading-relaxed font-medium">
+            চলমান ত্রুটিসমূহ যা বর্তমানে মেরামতাধীন। সমাধান বিবরণী প্রদান করে সফলভাবে কাজ সম্পন্ন ও আর্কাইভ করুন।
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0">
-          <div className="bg-amber-500/20 border border-amber-400/50 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-2xl text-center shadow-md">
-            <span className="text-[11px] sm:text-xs text-amber-200 font-mono block">চলমান কাজ</span>
-            <span className="text-xl sm:text-2xl font-black text-amber-400 font-mono">
+        <div className="flex flex-wrap items-center gap-3 shrink-0 relative z-10">
+          <div className="bg-[#FFFDD0] text-[#006A4E] border-2 border-[#FFFDD0] px-4 py-2 rounded-xl text-center shadow-xs">
+            <span className="text-[10px] text-[#006A4E]/80 font-bold uppercase tracking-wider block font-mono">খোলা কাজ • Open Jobs</span>
+            <span className="text-xl font-black text-[#006A4E] font-mono">
               {inProgressDefects.length}
             </span>
           </div>
           <button
             type="button"
             onClick={onNavigateToEntry}
-            className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#001733] font-algerian font-bold px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl text-xs flex items-center gap-2 transition-all cursor-pointer shadow-lg active:scale-95 shrink-0 uppercase tracking-wider"
+            className="bg-[#FFFDD0] hover:bg-[#F3EFBA] text-[#006A4E] font-bold px-4 py-2.5 rounded-xl text-xs font-algerian tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-xs border-2 border-[#FFFDD0] active:scale-95"
           >
-            <PlusCircle className="h-4 w-4 text-[#001733]" />
-            <span>NEW DEFECT ENTRY</span>
+            <PlusCircle className="h-4 w-4 text-[#006A4E]" />
+            <span>নতুন ডিফেক্ট এন্ট্রি • New Entry</span>
           </button>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-[#001738]/95 backdrop-blur-xl p-5 sm:p-6 rounded-3xl shadow-xl border border-amber-500/30 text-white">
+      {/* Filter and Search Bar - Bangladesh Naval Green (#006A4E) & Cream Theme */}
+      <div className="bg-white/95 border-2 border-[#006A4E]/30 hover:border-[#006A4E]/70 p-4 sm:p-5 rounded-2xl shadow-sm transition-all">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           
           {/* Keyword Search */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-amber-300 uppercase flex items-center gap-1.5">
-              <Search className="h-3.5 w-3.5 text-amber-400" />
+            <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <Search className="h-3.5 w-3.5 text-slate-500" />
               <span>SEARCH DEFECTS</span>
             </label>
             <div className="relative">
@@ -242,14 +258,14 @@ export default function InProgressJobs({
                 type="text"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder="জাহাজ, অবস্থান বা ডিফেক্ট বিবরণ..."
-                className="w-full pl-3 pr-8 py-2.5 bg-black/40 border border-white/20 focus:border-amber-400 rounded-xl text-xs text-white placeholder:text-slate-400 outline-none transition-colors"
+                placeholder="Ship, location or description..."
+                className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-300 focus:border-slate-500 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 outline-none"
               />
               {searchKeyword && (
                 <button 
                   type="button" 
-                  onClick={() => setSearchKeyword('')} 
-                  className="absolute right-2.5 top-3 text-slate-400 hover:text-white"
+                  onClick={() => setSearchKeyword('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -257,52 +273,45 @@ export default function InProgressJobs({
             </div>
           </div>
 
-          {/* Filter by Warship */}
+          {/* Ship Filter */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-amber-300 uppercase flex items-center gap-1.5">
-              <Ship className="h-3.5 w-3.5 text-amber-400" />
-              <span>FILTER BY WARSHIP</span>
+            <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <Ship className="h-3.5 w-3.5 text-slate-500" />
+              <span>WARSHIP</span>
             </label>
             <select
               value={filterShip}
               onChange={(e) => setFilterShip(e.target.value)}
-              className="w-full px-3 py-2.5 bg-black/40 border border-white/20 focus:border-amber-400 rounded-xl text-xs text-white outline-none cursor-pointer"
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-300 focus:border-slate-500 rounded-lg text-xs text-slate-800 outline-none cursor-pointer"
             >
-              <option value="" className="bg-[#001738] text-white">All Warships (সকল জাহাজ)</option>
-              {ships.map(s => (
-                <option key={s} value={s} className="bg-[#001738] text-white">{s}</option>
+              <option value="all">All Warships ({ships.length})</option>
+              {ships.map((s, idx) => (
+                <option key={idx} value={s}>{s}</option>
               ))}
             </select>
           </div>
 
-          {/* Filter by Workshop */}
+          {/* Workshop Filter */}
           <div className="space-y-1">
-            <label className="text-xs font-bold text-amber-300 uppercase flex items-center gap-1.5">
-              <Building2 className="h-3.5 w-3.5 text-amber-400" />
-              <span>{isWorkshopUser ? 'ASSIGNED SHOP (আপনার শপ)' : 'FILTER BY WORKSHOP'}</span>
+            <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <Building2 className="h-3.5 w-3.5 text-slate-500" />
+              <span>WORKSHOP</span>
             </label>
             {isWorkshopUser ? (
-              <div className="w-full px-3.5 py-2.5 bg-gradient-to-r from-amber-500/20 via-[#001f4d] to-black/40 border border-amber-400/60 rounded-xl text-xs text-amber-200 font-bold flex items-center justify-between shadow-inner gap-2">
-                <span className="flex items-center gap-2 min-w-0 flex-1">
-                  <span className="px-2 py-0.5 bg-amber-400 text-[#001733] font-mono text-[11px] rounded-md font-black shrink-0">
-                    {authSession?.workshopCode}
-                  </span>
-                  <span className="break-words text-white font-medium text-xs sm:text-sm">{authSession?.workshopNameEn} ({authSession?.workshopNameBn})</span>
-                </span>
-                <span className="text-[10px] font-mono font-black text-amber-300 bg-amber-400/20 px-2 py-0.5 rounded border border-amber-400/40 uppercase shrink-0">
-                  🔒 LOCKED
-                </span>
+              <div className="px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-xs text-slate-800 font-medium flex items-center justify-between">
+                <span className="truncate">{authSession?.workshopCode} — {authSession?.workshopNameEn}</span>
+                <span className="text-[10px] text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded">Locked</span>
               </div>
             ) : (
               <select
                 value={filterWorkshop}
                 onChange={(e) => setFilterWorkshop(e.target.value)}
-                className="w-full px-3 py-2.5 bg-black/40 border border-white/20 focus:border-amber-400 rounded-xl text-xs text-white outline-none cursor-pointer"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 focus:border-slate-500 rounded-lg text-xs text-slate-800 outline-none cursor-pointer"
               >
-                <option value="all" className="bg-[#001738] text-white">All Workshops (সকল শপ)</option>
+                <option value="all">All Workshops ({workshops.length})</option>
                 {workshops.map(ws => (
-                  <option key={ws.id} value={ws.code} className="bg-[#001738] text-white">
-                    {ws.code} — {ws.nameEn} ({ws.nameBn})
+                  <option key={ws.id} value={ws.code}>
+                    {ws.code} — {ws.nameEn}
                   </option>
                 ))}
               </select>
@@ -314,24 +323,23 @@ export default function InProgressJobs({
 
       {/* Main List of In-Progress Defects */}
       {inProgressDefects.length === 0 ? (
-        /* Empty State */
-        <div className="bg-[#001738]/95 backdrop-blur-xl p-12 sm:p-16 rounded-3xl border border-amber-500/30 text-center shadow-2xl space-y-4 text-white">
-          <div className="w-20 h-20 mx-auto rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-300 shadow-xl">
-            <CheckCircle2 className="h-10 w-10 text-emerald-400" />
+        <div className="bg-white border border-slate-200 p-10 sm:p-14 rounded-2xl text-center shadow-sm space-y-3">
+          <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+            <CheckCircle2 className="h-7 w-7" />
           </div>
-          <div className="max-w-md mx-auto space-y-1.5">
-            <h3 className="text-xl sm:text-2xl font-black font-algerian text-amber-300 tracking-wider uppercase">
-              NO IN PROGRESS DEFECTS
+          <div className="max-w-md mx-auto space-y-1">
+            <h3 className="text-base sm:text-lg font-bold text-slate-900">
+              No In-Progress Defects
             </h3>
-            <p className="text-sm text-slate-300 font-sans">
-              বর্তমানে কোনো অমীমাংসিত ডিফেক্ট নেই! সকল এন্ট্রি করা ডিফেক্টের সমাধান সফলভাবে সম্পন্ন হয়েছে।
+            <p className="text-xs sm:text-sm text-slate-500">
+              There are currently no open unresolved defects matching this filter.
             </p>
           </div>
           <div className="flex items-center justify-center gap-3 pt-2">
             <button
               type="button"
               onClick={onNavigateToEntry}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-[#001733] font-algerian font-bold text-xs uppercase shadow-md hover:from-amber-300 hover:to-amber-400 transition-all cursor-pointer"
+              className="px-4 py-2 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors"
             >
               Enter New Defect
             </button>
@@ -339,7 +347,7 @@ export default function InProgressJobs({
               <button
                 type="button"
                 onClick={onNavigateToFind}
-                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-algerian font-bold text-xs uppercase shadow-md transition-all cursor-pointer"
+                className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition-colors border border-slate-300"
               >
                 View Solved Defects
               </button>
@@ -347,89 +355,82 @@ export default function InProgressJobs({
           </div>
         </div>
       ) : (
-        /* In Progress Defects Cards */
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
           {inProgressDefects.map((defect) => (
             <div 
               key={defect.id}
-              className="bg-[#001738]/95 backdrop-blur-xl border border-amber-500/35 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col justify-between space-y-4 text-white hover:border-amber-400 transition-all group"
+              className="bg-white/95 border-2 border-[#006A4E]/25 hover:border-[#006A4E]/70 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4 hover:shadow-md transition-all relative overflow-hidden text-[#1B331F]"
             >
-              {/* Card Header */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-3">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2 border-b-2 border-[#006A4E]/15 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono bg-rose-500/20 text-rose-300 border border-rose-500/40">
-                      <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping"></span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-500/10 text-rose-700 border border-rose-300">
+                      <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
                       <span>IN PROGRESS</span>
                     </span>
-                    <span className="text-xs text-amber-300/80 font-mono flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5 text-amber-400" />
+                    <span className="text-xs text-slate-500 font-mono flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
                       <span>{defect.defectDate}</span>
                     </span>
                   </div>
 
-                  <span className="px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-400/40 text-cyan-200 text-xs font-mono font-bold">
+                  <span className="px-2.5 py-1 rounded-lg bg-[#006A4E] text-[#FFFDD0] text-[11px] font-mono font-bold border border-[#FFFDD0]/30 shadow-xs">
                     {defect.workshop || defect.workshopCode || 'WS-01'}
                   </span>
                 </div>
 
-                {/* Ship & Location */}
                 <div>
-                  <h4 className="text-lg sm:text-xl font-algerian font-bold text-white flex items-center gap-2 group-hover:text-amber-300 transition-colors">
-                    <Ship className="h-5 w-5 text-amber-400 shrink-0" />
+                  <h4 className="text-base font-bold text-[#006A4E] flex items-center gap-2 font-algerian tracking-wide">
+                    <Ship className="h-4.5 w-4.5 text-[#006A4E] shrink-0" />
                     <span>{defect.shipName}</span>
                   </h4>
-                  <p className="text-xs sm:text-sm text-cyan-200 font-medium flex items-center gap-1.5 mt-1">
-                    <MapPin className="h-4 w-4 text-cyan-400 shrink-0" />
+                  <p className="text-xs text-slate-600 font-medium flex items-center gap-1.5 mt-0.5">
+                    <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                     <span>{defect.location}</span>
                   </p>
                 </div>
 
-                {/* Defect Description */}
-                <div className="p-3 bg-black/40 border border-white/10 rounded-2xl text-xs sm:text-sm text-slate-200 leading-relaxed">
-                  <span className="text-[11px] font-bold text-amber-400 uppercase block mb-1">
-                    ডিফেক্ট বিবরণ (Defect Description):
+                <div className="p-3.5 bg-[#006A4E]/5 border border-[#006A4E]/20 rounded-xl text-xs text-[#1B331F] leading-relaxed">
+                  <span className="text-[10px] font-bold text-[#006A4E] uppercase tracking-wider block mb-1">
+                    DEFECT DESCRIPTION:
                   </span>
-                  <p className="break-words">
-                    {defect.defectDescription || 'কোনো লিখিত বিবরণ নেই।'}
+                  <p className="break-words font-medium">
+                    {defect.defectDescription || 'No description provided.'}
                   </p>
                 </div>
 
-                {/* Defect Photo thumbnail if present */}
                 {defect.defectImage && (
                   <div className="flex items-center gap-3 pt-1">
                     <div 
                       onClick={() => setPreviewImage(defect.defectImage)}
-                      className="relative w-16 h-16 rounded-xl overflow-hidden border-2 border-rose-400/60 shadow-md cursor-pointer group/img shrink-0"
-                      title="Click to view defect photo"
+                      className="relative w-14 h-14 rounded-xl overflow-hidden border border-slate-300 shadow-xs cursor-pointer group shrink-0 hover:border-amber-400 transition-colors"
                     >
-                      <img src={defect.defectImage} alt="Defect" className="w-full h-full object-cover group-hover/img:scale-110 transition-transform" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity">
-                        <Maximize2 className="h-4 w-4 text-white" />
+                      <img src={defect.defectImage} alt="Defect" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <Maximize2 className="h-3.5 w-3.5 text-white" />
                       </div>
                     </div>
-                    <div className="text-xs text-slate-300">
-                      <span className="font-bold text-rose-300 block">ডিফেক্টের ছবি সংযুক্ত আছে</span>
-                      <span className="text-[11px] text-slate-400">ক্লিক করে বড় করে দেখুন</span>
+                    <div className="text-xs text-slate-500">
+                      <span className="font-semibold text-slate-800 block">Defect Photo Attached</span>
+                      <span className="text-[11px]">Click thumbnail to enlarge</span>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Action Button: ADD SOLUTION */}
-              <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <span className="text-[11px] text-slate-400 font-mono shrink-0">
-                  আইডি: {defect.id.slice(-8)}
+              <div className="pt-3 border-t-2 border-[#006A4E]/15 flex items-center justify-between gap-3">
+                <span className="text-[11px] text-[#006A4E]/80 font-mono font-medium">
+                  REF: {defect.id.slice(-6)}
                 </span>
                 
                 <button
                   type="button"
                   onClick={() => handleOpenSolveModal(defect)}
-                  className="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-white font-algerian font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 text-center break-words"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#006A4E] to-[#004e39] hover:from-[#005740] hover:to-[#00402e] text-[#FFFDD0] border-2 border-[#FFFDD0]/60 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer font-algerian tracking-wider"
                 >
-                  <Wrench className="h-4 w-4 text-amber-300 shrink-0" />
-                  <span>সমাধান যোগ করুন (ADD SOLUTION)</span>
-                  <ArrowRight className="h-3.5 w-3.5 text-white shrink-0" />
+                  <Wrench className="h-3.5 w-3.5 text-[#FFFDD0]" />
+                  <span>Solve Job</span>
                 </button>
               </div>
 
@@ -438,137 +439,110 @@ export default function InProgressJobs({
         </div>
       )}
 
-      {/* =========================================================================
-          SOLUTION INPUT MODAL (সমাধান যোগ করার ডায়ালগ বক্স)
-      ========================================================================= */}
+      {/* Modal: Solve Defect Form */}
       {solvingDefect && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-lg bg-[#00142e]/98 backdrop-blur-2xl border-2 border-amber-400/60 rounded-3xl p-6 sm:p-7 shadow-[0_25px_60px_-15px_rgba(0,10,35,0.95)] text-white relative overflow-hidden max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-xl p-5 sm:p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
             
-            {/* Top Navy-Gold Line Accent */}
-            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-emerald-400 to-cyan-400"></div>
-
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={() => setSolvingDefect(null)}
-              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-amber-400 bg-white/5 hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-              title="Close"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl text-white shadow-lg shrink-0">
-                <FileCheck2 className="h-6 w-6 stroke-[2.2]" />
-              </div>
-              <div>
-                <h3 className="text-lg sm:text-xl font-algerian font-bold text-amber-300 uppercase tracking-wide">
-                  ADD DEFECT SOLUTION
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-emerald-600" />
+                <h3 className="text-base font-bold text-slate-900">
+                  Complete Defect Remedial Action
                 </h3>
-                <p className="text-xs text-slate-300 font-sans">
-                  ডিফেক্টের সমাধান ও গৃহীত পদক্ষেপ লিপিবদ্ধ করুন
-                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setSolvingDefect(null)}
+                className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
-            {/* Defect Context Summary */}
-            <div className="p-3.5 bg-black/50 border border-white/10 rounded-2xl mb-4 space-y-1 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-white flex items-center gap-1.5">
-                  <Ship className="h-3.5 w-3.5 text-amber-400" />
-                  <span>{solvingDefect.shipName}</span>
-                </span>
-                <span className="text-cyan-300 font-mono">{solvingDefect.defectDate}</span>
-              </div>
-              <div className="text-slate-300 flex items-center gap-1">
-                <MapPin className="h-3 w-3 text-cyan-400" />
-                <span>স্থান: {solvingDefect.location}</span>
-                <span className="text-slate-500">•</span>
-                <span className="text-amber-300/80">{solvingDefect.workshop}</span>
-              </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1">
+              <div className="font-semibold text-slate-900">{solvingDefect.shipName} • {solvingDefect.location}</div>
+              <div className="text-slate-600 truncate">{solvingDefect.defectDescription}</div>
             </div>
 
-            {/* Solution Form */}
-            <form onSubmit={handleConfirmSolution} className="space-y-4">
-              
-              {/* Solution Date */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-amber-300 uppercase flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-amber-400" />
-                  <span>সমাধানের তারিখ (Solution Date) *</span>
+            <form onSubmit={handleCompleteSolve} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  SOLUTION DATE *
                 </label>
-                <input
-                  type="date"
-                  value={solutionDate}
-                  onChange={(e) => setSolutionDate(e.target.value)}
-                  required
-                  className="w-full px-3 py-2.5 bg-[#000c1e] border border-white/20 focus:border-amber-400 rounded-xl text-xs font-mono text-white outline-none cursor-pointer"
-                />
+                <div className="relative">
+                  <input
+                    ref={solutionDateInputRef}
+                    type="date"
+                    value={solutionDate}
+                    onChange={(e) => setSolutionDate(e.target.value)}
+                    onClick={(e) => {
+                      try {
+                        e.currentTarget.showPicker?.();
+                      } catch {}
+                    }}
+                    required
+                    className="w-full pl-3 pr-10 py-2 bg-white border border-slate-300 focus:border-slate-500 rounded-lg text-xs text-slate-800 outline-none cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 hover:[&::-webkit-calendar-picker-indicator]:opacity-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => safeOpenDatePicker(solutionDateInputRef.current)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-[#006A4E] cursor-pointer transition-colors"
+                    title="ক্যালেন্ডার ওপেন করুন"
+                  >
+                    <Calendar className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
-              {/* Solution Description / Action Taken */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-amber-300 uppercase flex items-center gap-1.5">
-                  <Wrench className="h-3.5 w-3.5 text-amber-400" />
-                  <span>গৃহীত পদক্ষেপ ও সমাধান বিবরণ (Action Taken) *</span>
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  ACTION TAKEN / REMEDIAL DESCRIPTION *
                 </label>
                 <textarea
                   rows={3}
                   value={solutionDesc}
                   onChange={(e) => setSolutionDesc(e.target.value)}
-                  placeholder="ডিফেক্টটির কী সমাধান করা হয়েছে এবং কী পার্টস পরিবর্তন/মেরামত করা হয়েছে তা সংক্ষেপে লিখুন..."
+                  placeholder="Describe repair actions taken, replaced components, tests..."
                   required
-                  className="w-full px-3 py-2.5 bg-[#000c1e] border border-white/20 focus:border-amber-400 rounded-xl text-xs text-white placeholder:text-slate-500 outline-none resize-none leading-relaxed"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 focus:border-slate-500 rounded-lg text-xs text-slate-800 outline-none leading-relaxed"
                 />
               </div>
 
-              {/* Solution Photo Upload */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-amber-300 uppercase flex items-center gap-1.5">
-                  <ImageIcon className="h-3.5 w-3.5 text-amber-400" />
-                  <span>সমাধান পরবর্তী ছবি (Solution Photo - ঐচ্ছিক)</span>
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  AFTER REPAIR PHOTO (OPTIONAL)
                 </label>
-                
                 {solutionImage ? (
-                  <div className="relative w-full h-36 rounded-2xl overflow-hidden border-2 border-emerald-400/70 shadow-md">
+                  <div className="relative w-full h-32 rounded-lg overflow-hidden border border-slate-300 bg-white">
                     <img src={solutionImage} alt="Solution" className="w-full h-full object-cover" />
                     <button
                       type="button"
                       onClick={() => setSolutionImage('')}
-                      className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-rose-600 text-white rounded-xl transition-colors cursor-pointer"
-                      title="Remove Photo"
+                      className="absolute top-2 right-2 p-1 bg-slate-900/80 text-white rounded-md hover:bg-slate-900"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-white/20 hover:border-amber-400/60 rounded-2xl p-4 cursor-pointer bg-black/30 hover:bg-black/50 transition-all text-center">
-                      <Upload className="h-6 w-6 text-amber-400 mb-1" />
-                      <span className="text-xs font-bold text-white">ছবি আপলোড করতে ক্লিক করুন</span>
-                      <span className="text-[10px] text-slate-400 font-mono mt-0.5">JPG, PNG সর্বোচ্চ ৩MB</span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleFileUpload}
-                        className="hidden" 
-                      />
+                    <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-300 hover:border-slate-400 rounded-lg cursor-pointer bg-slate-50 transition-colors">
+                      <Upload className="h-4 w-4 text-slate-400 mb-1" />
+                      <span className="text-xs text-slate-600 font-medium">Click to upload photo</span>
+                      <span className="text-[10px] text-slate-400">PNG, JPG up to 10MB</span>
+                      <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
                     </label>
-
-                    {/* Quick Preset Photo Buttons */}
-                    <div className="flex items-center gap-2 pt-1">
-                      <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
-                        <Sparkles className="h-3 w-3 text-amber-400" />
-                        <span>বা ডেমো ছবি দিন:</span>
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3 text-slate-400" />
+                        <span>Presets:</span>
                       </span>
                       {PRESET_SOLUTION_PHOTOS.map((p, idx) => (
                         <button
                           key={idx}
                           type="button"
                           onClick={() => setSolutionImage(p.url)}
-                          className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/15 border border-white/10 text-[10px] text-amber-300 transition-colors cursor-pointer"
+                          className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 border border-slate-200 text-[11px] text-slate-700 transition-colors cursor-pointer"
                         >
                           {p.name}
                         </button>
@@ -578,22 +552,21 @@ export default function InProgressJobs({
                 )}
               </div>
 
-              {/* Submit Buttons */}
-              <div className="pt-3 border-t border-white/10 flex items-center justify-end gap-3">
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setSolvingDefect(null)}
-                  className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors"
                 >
-                  Cancel (বাতিল)
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-white font-algerian font-bold text-xs uppercase tracking-wider shadow-lg shadow-emerald-900/30 flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors flex items-center gap-1.5"
                 >
-                  <CheckCircle2 className="h-4 w-4 text-amber-300" />
-                  <span>{isSubmitting ? 'সংরক্ষণ হচ্ছে...' : 'COMPLETE & SOLVE JOB'}</span>
+                  <CheckCircle2 className="h-4 w-4 text-white" />
+                  <span>{isSubmitting ? 'Saving...' : 'Mark as Solved'}</span>
                 </button>
               </div>
 
@@ -607,16 +580,16 @@ export default function InProgressJobs({
       {previewImage && (
         <div 
           onClick={() => setPreviewImage(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in cursor-pointer"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-xs animate-fade-in cursor-pointer"
         >
-          <div className="relative max-w-3xl max-h-[85vh] rounded-2xl overflow-hidden border-2 border-amber-400 shadow-2xl">
+          <div className="relative max-w-2xl max-h-[80vh] rounded-xl overflow-hidden border border-slate-700 bg-black shadow-2xl">
             <img src={previewImage} alt="Defect Preview" className="w-full h-full object-contain" />
             <button
               type="button"
               onClick={() => setPreviewImage(null)}
-              className="absolute top-3 right-3 p-2 bg-black/70 hover:bg-black text-white rounded-full cursor-pointer"
+              className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-black text-white rounded-full cursor-pointer"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
