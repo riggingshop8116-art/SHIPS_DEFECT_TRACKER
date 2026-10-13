@@ -39,10 +39,17 @@ import {
   ExternalLink,
   Anchor
 } from 'lucide-react';
-import { Workshop, DockyardConfig, UserProfile, Defect, AdminSubTab } from '../types';
+import { Workshop, DockyardConfig, UserProfile, Defect, AdminSubTab, ProductionUnitItem } from '../types';
 import { DEFAULT_WORKSHOPS, DEFAULT_SHIPS, DEFAULT_LOCATIONS, DEFAULT_DOCKYARD_CONFIG, DEFAULT_PROFILE } from '../constants';
 import { supabaseService } from '../services/supabaseService';
-import { SUPABASE_SQL_SCHEMA } from '../lib/supabase';
+
+export const DGM_DEPARTMENTS = [
+  { code: 'H&M', label: 'H&M (Hull and Miscellaneous)', categoryKey: 'hull' as const, dgmTitle: 'DGM (H&M)' },
+  { code: 'MAC', label: 'MAC (Mechanical)', categoryKey: 'mechanical' as const, dgmTitle: 'DGM (MECH)' },
+  { code: 'W&E', label: 'W&E (Weapon & Electrical)', categoryKey: 'weapon_electrical' as const, dgmTitle: 'DGM (W&E)' },
+  { code: 'ORDANCE', label: 'ORDANCE (Ordnance)', categoryKey: 'ordnance' as const, dgmTitle: 'DGM (ORD)' },
+  { code: 'YS', label: 'YS (Yard Services / Ship Repair)', categoryKey: 'ship_repair' as const, dgmTitle: 'DGM (SR)' },
+];
 
 interface AdminPanelProps {
   workshops: Workshop[];
@@ -61,6 +68,8 @@ interface AdminPanelProps {
   onResetApp: () => void;
   riggingShopName: string;
   onUpdateRiggingShopName: (name: string) => void;
+  productionUnits?: ProductionUnitItem[];
+  onUpdateProductionUnits?: (units: ProductionUnitItem[]) => void;
   initialSubTab?: AdminSubTab;
   onSubTabChange?: (subTab: AdminSubTab) => void;
   bgIntensity?: 'balanced' | 'vivid' | 'soft';
@@ -84,6 +93,8 @@ export default function AdminPanel({
   onResetApp,
   riggingShopName,
   onUpdateRiggingShopName,
+  productionUnits,
+  onUpdateProductionUnits,
   initialSubTab = 'workshops',
   onSubTabChange,
   bgIntensity = 'balanced',
@@ -114,7 +125,7 @@ export default function AdminPanel({
     code: `WS-${String(workshops.length + 1).padStart(2, '0')}`,
     nameBn: '',
     nameEn: '',
-    category: 'Mechanical',
+    category: 'H&M',
     oicRank: 'Lieutenant',
     oicName: '',
     phoneExt: '4230',
@@ -146,27 +157,6 @@ export default function AdminPanel({
   const [localRiggingName, setLocalRiggingName] = useState<string>(riggingShopName);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState<boolean>(false);
   const [isSavingProfileToDb, setIsSavingProfileToDb] = useState<boolean>(false);
-  const [isPushingToSupabase, setIsPushingToSupabase] = useState<boolean>(false);
-  const [pushSupabaseMsg, setPushSupabaseMsg] = useState<string | null>(null);
-  const [copiedSql, setCopiedSql] = useState<boolean>(false);
-  const [showSqlPreview, setShowSqlPreview] = useState<boolean>(false);
-
-  const handleCopySql = () => {
-    navigator.clipboard.writeText(SUPABASE_SQL_SCHEMA);
-    setCopiedSql(true);
-    setTimeout(() => setCopiedSql(false), 2500);
-  };
-
-  const handleDownloadSql = () => {
-    const blob = new Blob([SUPABASE_SQL_SCHEMA], { type: 'text/sql' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'supabase-complete-setup.sql';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   useEffect(() => {
     setProfileName(profile.name);
     setProfileRank(profile.rank);
@@ -260,12 +250,13 @@ export default function AdminPanel({
       alert('Workshop English name is required!');
       return;
     }
+    const dept = resolveDgmDepartment(newUserForm.category);
     const newWs: Workshop = {
       id: `ws-${Date.now()}`,
       code: newUserForm.code.trim() || `WS-${String(workshops.length + 1).padStart(2, '0')}`,
       nameEn: newUserForm.nameEn.trim(),
       nameBn: newUserForm.nameBn.trim() || newUserForm.nameEn.trim(),
-      category: newUserForm.category || 'Mechanical',
+      category: dept.code,
       oicRank: newUserForm.oicRank || 'Lieutenant',
       oicName: newUserForm.oicName.trim() || 'Not Assigned',
       phoneExt: newUserForm.phoneExt.trim() || '4000',
@@ -281,6 +272,32 @@ export default function AdminPanel({
     } catch (err) {
       console.warn('[Supabase] Error creating new workshop:', err);
     }
+
+    // Automatically add this workshop under the selected department in Production Department!
+    if (onUpdateProductionUnits && productionUnits) {
+      const newUnit: ProductionUnitItem = {
+        id: `unit_${newWs.code.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+        workshopCode: newWs.code,
+        titleEn: `${newWs.code} ${newWs.nameEn}`,
+        titleBn: newWs.nameBn || newWs.nameEn,
+        roleTitle: `Officer-in-Charge (${newWs.nameEn})`,
+        category: dept.categoryKey,
+        officerDesignation: `${newWs.oicRank || 'Lieutenant'} ${newWs.oicName || ''}, BN`.trim(),
+        scopeBn: newWs.description || `${newWs.nameEn} এর কারিগরী মেরামত ও রিফিট কার্যক্রম।`,
+        responsibilities: [
+          `${newWs.nameEn} সংক্রান্ত মেরিন মেরামত ও রক্ষণাবেক্ষণ কার্যক্রম পরিচালনা।`,
+          'যুদ্ধজাহাজের নির্ধারিত কম্পার্টমেন্ট ও যন্ত্রাংশের রিফিট তদারকি।',
+          `${dept.dgmTitle} এর নির্দেশনা অনুযায়ী কারিগরী সেবা নিশ্চিতকরণ।`
+        ],
+        keyEquipments: ['Specialized Workshop Machinery & Diagnostic Tools', 'Naval Marine Repair Gear'],
+        locationInYard: `${dept.dgmTitle} Complex`,
+        phoneExt: `Dockyard Ext: ${newWs.phoneExt || '4000'}`
+      };
+      const updatedUnits = [...productionUnits, newUnit];
+      onUpdateProductionUnits(updatedUnits);
+      supabaseService.saveProductionUnits(updatedUnits);
+    }
+
     setIsAddingUserModal(false);
     setUserSuccessMsg(`নতুন শপ ইউজার ${newWs.code} সফলভাবে ডাটাবেজে যুক্ত হয়েছে!`);
     setTimeout(() => setUserSuccessMsg(null), 3000);
@@ -369,16 +386,83 @@ export default function AdminPanel({
     setTimeout(() => setConfigSaveMsg(false), 3000);
   };
 
+  const resolveDgmDepartment = (cat?: string) => {
+    if (!cat) return DGM_DEPARTMENTS[0];
+    const upper = cat.trim().toUpperCase();
+    const found = DGM_DEPARTMENTS.find(d => 
+      d.code.toUpperCase() === upper || 
+      d.categoryKey.toUpperCase() === upper ||
+      d.label.toUpperCase().includes(upper)
+    );
+    if (found) return found;
+    if (upper.includes('HULL') || upper.includes('H&M') || upper.includes('DECK') || upper.includes('LIFT')) return DGM_DEPARTMENTS[0];
+    if (upper.includes('MECH') || upper.includes('MAC') || upper.includes('ENGINE') || upper.includes('TURBINE')) return DGM_DEPARTMENTS[1];
+    if (upper.includes('ELEC') || upper.includes('W&E') || upper.includes('RADAR') || upper.includes('POWER')) return DGM_DEPARTMENTS[2];
+    if (upper.includes('ORD') || upper.includes('GUN') || upper.includes('WEAPON')) return DGM_DEPARTMENTS[3];
+    return DGM_DEPARTMENTS[4];
+  };
+
   // Save Workshop Edit
   const handleSaveWorkshopEdit = async () => {
     if (!editingWorkshop) return;
-    const updated = workshops.map(ws => ws.id === editingWorkshop.id ? editingWorkshop : ws);
+    const dept = resolveDgmDepartment(editingWorkshop.category);
+    const normalizedWorkshop: Workshop = {
+      ...editingWorkshop,
+      category: dept.code
+    };
+    const updated = workshops.map(ws => ws.id === editingWorkshop.id ? normalizedWorkshop : ws);
     onUpdateWorkshops(updated);
     try {
-      await supabaseService.upsertWorkshop(editingWorkshop);
+      await supabaseService.upsertWorkshop(normalizedWorkshop);
     } catch (err) {
       console.warn('Upsert workshop error:', err);
     }
+
+    // Synchronize renamed workshop details with Production Department
+    if (onUpdateProductionUnits && productionUnits) {
+      const targetCode = normalizedWorkshop.code.toUpperCase();
+      const existingIdx = productionUnits.findIndex(u => 
+        (u.workshopCode && u.workshopCode.toUpperCase() === targetCode) ||
+        u.id.toLowerCase().includes(normalizedWorkshop.code.toLowerCase())
+      );
+
+      let updatedUnits = [...productionUnits];
+      if (existingIdx >= 0) {
+        updatedUnits[existingIdx] = {
+          ...updatedUnits[existingIdx],
+          workshopCode: normalizedWorkshop.code,
+          titleEn: `${normalizedWorkshop.code} ${normalizedWorkshop.nameEn}`,
+          titleBn: normalizedWorkshop.nameBn || normalizedWorkshop.nameEn,
+          roleTitle: `Officer-in-Charge (${normalizedWorkshop.nameEn})`,
+          category: dept.categoryKey,
+          officerDesignation: `${normalizedWorkshop.oicRank || 'Lieutenant'} ${normalizedWorkshop.oicName || ''}, BN`.trim(),
+          phoneExt: `Dockyard Ext: ${normalizedWorkshop.phoneExt || '4000'}`,
+          scopeBn: normalizedWorkshop.description || updatedUnits[existingIdx].scopeBn
+        };
+      } else {
+        updatedUnits.push({
+          id: `unit_${normalizedWorkshop.code.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+          workshopCode: normalizedWorkshop.code,
+          titleEn: `${normalizedWorkshop.code} ${normalizedWorkshop.nameEn}`,
+          titleBn: normalizedWorkshop.nameBn || normalizedWorkshop.nameEn,
+          roleTitle: `Officer-in-Charge (${normalizedWorkshop.nameEn})`,
+          category: dept.categoryKey,
+          officerDesignation: `${normalizedWorkshop.oicRank || 'Lieutenant'} ${normalizedWorkshop.oicName || ''}, BN`.trim(),
+          scopeBn: normalizedWorkshop.description || `${normalizedWorkshop.nameEn} এর কারিগরী মেরামত ও রিফিট কার্যক্রম।`,
+          responsibilities: [
+            `${normalizedWorkshop.nameEn} সংক্রান্ত মেরিন মেরামত ও রক্ষণাবেক্ষণ কার্যক্রম পরিচালনা।`,
+            'যুদ্ধজাহাজের নির্ধারিত কম্পার্টমেন্ট ও যন্ত্রাংশের রিফিট তদারকি।',
+            `${dept.dgmTitle} এর নির্দেশনা অনুযায়ী কারিগরী সেবা নিশ্চিতকরণ।`
+          ],
+          keyEquipments: ['Specialized Workshop Machinery & Diagnostic Tools'],
+          locationInYard: `${dept.dgmTitle} Complex`,
+          phoneExt: `Dockyard Ext: ${normalizedWorkshop.phoneExt || '4000'}`
+        });
+      }
+      onUpdateProductionUnits(updatedUnits);
+      supabaseService.saveProductionUnits(updatedUnits);
+    }
+
     setEditingWorkshop(null);
   };
 
@@ -389,12 +473,13 @@ export default function AdminPanel({
       alert('Workshop English name is required!');
       return;
     }
+    const dept = resolveDgmDepartment(newWorkshopData.category);
     const fresh: Workshop = {
       id: `ws-${Date.now()}`,
       code: newWorkshopData.code || `WS-${String(workshops.length + 1).padStart(2, '0')}`,
       nameBn: newWorkshopData.nameBn || newWorkshopData.nameEn,
       nameEn: newWorkshopData.nameEn,
-      category: newWorkshopData.category || 'General',
+      category: dept.code,
       oicRank: newWorkshopData.oicRank || 'Lieutenant',
       oicName: newWorkshopData.oicName || 'Not Assigned',
       phoneExt: newWorkshopData.phoneExt || '4000',
@@ -407,12 +492,38 @@ export default function AdminPanel({
     } catch (err) {
       console.warn('Upsert new workshop error:', err);
     }
+
+    // Automatically add this workshop under the selected department in Production Department!
+    if (onUpdateProductionUnits && productionUnits) {
+      const newUnit: ProductionUnitItem = {
+        id: `unit_${fresh.code.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+        workshopCode: fresh.code,
+        titleEn: `${fresh.code} ${fresh.nameEn}`,
+        titleBn: fresh.nameBn || fresh.nameEn,
+        roleTitle: `Officer-in-Charge (${fresh.nameEn})`,
+        category: dept.categoryKey,
+        officerDesignation: `${fresh.oicRank || 'Lieutenant'} ${fresh.oicName || ''}, BN`.trim(),
+        scopeBn: fresh.description || `${fresh.nameEn} এর কারিগরী মেরামত ও রিফিট কার্যক্রম।`,
+        responsibilities: [
+          `${fresh.nameEn} সংক্রান্ত মেরিন মেরামত ও রক্ষণাবেক্ষণ কার্যক্রম পরিচালনা।`,
+          'যুদ্ধজাহাজের নির্ধারিত কম্পার্টমেন্ট ও যন্ত্রাংশের রিফিট তদারকি।',
+          `${dept.dgmTitle} এর নির্দেশনা অনুযায়ী কারিগরী সেবা নিশ্চিতকরণ।`
+        ],
+        keyEquipments: ['Specialized Workshop Machinery & Diagnostic Tools', 'Naval Marine Repair Gear'],
+        locationInYard: `${dept.dgmTitle} Complex`,
+        phoneExt: `Dockyard Ext: ${fresh.phoneExt || '4000'}`
+      };
+      const updatedUnits = [...productionUnits, newUnit];
+      onUpdateProductionUnits(updatedUnits);
+      supabaseService.saveProductionUnits(updatedUnits);
+    }
+
     setIsAddingWorkshop(false);
     setNewWorkshopData({
       code: `WS-${String(workshops.length + 2).padStart(2, '0')}`,
       nameBn: '',
       nameEn: '',
-      category: 'Mechanical',
+      category: 'H&M',
       oicRank: 'Lieutenant',
       oicName: '',
       phoneExt: '4230',
@@ -424,12 +535,23 @@ export default function AdminPanel({
   // Delete Workshop
   const handleDeleteWorkshop = async (id: string, name: string) => {
     if (confirm(`Are you sure you want to delete "${name}" from the workshop registry?`)) {
+      const targetWs = workshops.find(ws => ws.id === id);
       const updated = workshops.filter(ws => ws.id !== id);
       onUpdateWorkshops(updated);
       try {
         await supabaseService.deleteWorkshop(id);
       } catch (err) {
         console.warn('Delete workshop error:', err);
+      }
+
+      // Remove from Production Department
+      if (onUpdateProductionUnits && productionUnits && targetWs) {
+        const updatedUnits = productionUnits.filter(u => 
+          u.workshopCode?.toUpperCase() !== targetWs.code.toUpperCase() &&
+          !u.id.toLowerCase().includes(targetWs.code.toLowerCase())
+        );
+        onUpdateProductionUnits(updatedUnits);
+        supabaseService.saveProductionUnits(updatedUnits);
       }
     }
   };
@@ -485,76 +607,6 @@ export default function AdminPanel({
       reader.onload = () => setProfileAvatar(reader.result as string);
       reader.readAsDataURL(file);
     }
-  };
-
-  // Push all default / current data to Supabase Cloud
-  const handlePushAllToSupabase = async () => {
-    setIsPushingToSupabase(true);
-    setPushSupabaseMsg(null);
-    try {
-      const res = await supabaseService.pushAllDefaultsToSupabase(
-        workshops,
-        ships,
-        locations,
-        dockyardConfig,
-        profile,
-        defects
-      );
-      if (res.success) {
-        setPushSupabaseMsg(`সফলভাবে পুশ সম্পন্ন হয়েছে! (${res.counts.workshops}টি শপ, ${res.counts.ships}টি জাহাজ, ${res.counts.locations}টি কম্পার্টমেন্ট, ${res.counts.defects}টি ডিফেক্ট ক্লাউডে সংরক্ষিত)`);
-      } else {
-        setPushSupabaseMsg(res.message);
-      }
-    } catch (err: any) {
-      setPushSupabaseMsg(`পুশ ব্যর্থ হয়েছে: ${err?.message || 'Error'}`);
-    } finally {
-      setIsPushingToSupabase(false);
-      setTimeout(() => {
-        setPushSupabaseMsg(null);
-      }, 7000);
-    }
-  };
-
-  // Export JSON Backup
-  const handleExportData = () => {
-    const backup = {
-      exportDate: new Date().toISOString(),
-      dockyardConfig,
-      workshops,
-      ships,
-      locations,
-      defects,
-      profile,
-      riggingShopName
-    };
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `bn_dockyard_backup_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // Import JSON Backup
-  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const data = JSON.parse(event.target?.result as string);
-        if (data.workshops) onUpdateWorkshops(data.workshops);
-        if (data.dockyardConfig) onUpdateDockyardConfig(data.dockyardConfig);
-        if (data.defects) localStorage.setItem('defect_tracker_defects', JSON.stringify(data.defects));
-        if (data.ships) localStorage.setItem('defect_tracker_ships', JSON.stringify(data.ships));
-        alert('Data backup successfully restored! Reloading application...');
-        window.location.reload();
-      } catch (err) {
-        alert('Invalid backup file format!');
-      }
-    };
-    reader.readAsText(file);
   };
 
   // Lock body scroll when modal is open so the user stays focused on dialog
@@ -781,14 +833,18 @@ export default function AdminPanel({
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">CATEGORY / DIVISION</label>
-                  <input
-                    type="text"
-                    value={newWorkshopData.category}
+                  <label className="text-[11px] font-semibold text-slate-700 block mb-1">DEPARTMENT (ডিপার্টমেন্ট) *</label>
+                  <select
+                    value={newWorkshopData.category || 'H&M'}
                     onChange={(e) => setNewWorkshopData({...newWorkshopData, category: e.target.value})}
-                    placeholder="e.g. Mechanical / Hull"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 outline-none focus:border-slate-400"
-                  />
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-slate-400 cursor-pointer"
+                  >
+                    {DGM_DEPARTMENTS.map(dept => (
+                      <option key={dept.code} value={dept.code}>
+                        {dept.code} - {dept.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 block mb-1">INTERCOM EXT</label>
@@ -910,13 +966,18 @@ export default function AdminPanel({
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-[11px] font-semibold text-slate-600 block mb-1">CATEGORY</label>
-                      <input
-                        type="text"
-                        value={editingWorkshop.category}
+                      <label className="text-[11px] font-semibold text-slate-700 block mb-1">DEPARTMENT (ডিপার্টমেন্ট) *</label>
+                      <select
+                        value={editingWorkshop.category || 'H&M'}
                         onChange={(e) => setEditingWorkshop({...editingWorkshop, category: e.target.value})}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 outline-none focus:border-slate-400 focus:bg-white"
-                      />
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-900 outline-none focus:border-slate-500 focus:bg-white cursor-pointer"
+                      >
+                        {DGM_DEPARTMENTS.map(dept => (
+                          <option key={dept.code} value={dept.code}>
+                            {dept.code} - {dept.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="text-[11px] font-semibold text-slate-600 block mb-1">OIC RANK</label>
@@ -1003,7 +1064,7 @@ export default function AdminPanel({
                 <tr>
                   <th className="py-3 px-4">CODE</th>
                   <th className="py-3 px-4">WORKSHOP NAME</th>
-                  <th className="py-3 px-4">DIVISION / CATEGORY</th>
+                  <th className="py-3 px-4">DEPARTMENT (ডিপার্টমেন্ট)</th>
                   <th className="py-3 px-4">OFFICER-IN-CHARGE (OIC)</th>
                   <th className="py-3 px-4">INTERCOM</th>
                   <th className="py-3 px-4 text-center">ACTION</th>
@@ -1013,7 +1074,7 @@ export default function AdminPanel({
                 {filteredWorkshops.map((ws) => (
                   <tr key={ws.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                      <span className="px-2 py-0.5 bg-slate-100 border border-slate-200 rounded text-xs text-slate-800 font-mono">
+                      <span className="inline-flex items-center justify-center px-2.5 py-1 bg-gradient-to-r from-[#003828] via-[#006A4E] to-[#004d38] text-[#FFFDD0] border border-amber-400/60 rounded-lg text-xs font-mono font-black tracking-wider shadow-xs min-w-[70px]">
                         {ws.code}
                       </span>
                     </td>
@@ -1565,119 +1626,6 @@ export default function AdminPanel({
             </div>
           </div>
 
-          {/* Section 7: Data Backup & System Restore */}
-          <div className="space-y-5 bg-slate-50/50 p-5 rounded-xl border border-slate-200">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wider">
-              <span className="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
-              <span>7. ক্লাউড ডাটাবেজ পারসিস্টেন্স ও ব্যাকআপ (Cloud Persistence & Backup)</span>
-            </div>
-
-            {/* Supabase Push All Feature */}
-            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-3 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                    <Database className="h-4 w-4 text-slate-700" />
-                    <span>সোপাবেজ ক্লাউডে সমস্ত ডাটা পুশ করুন (Push All to Supabase)</span>
-                  </h4>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    ওয়েবসাইট ডিপ্লয়ের পর সমস্ত কনফিগারেশন, ২৭টি শপ, ১৭টি জাহাজ, ১০টি কম্পার্টমেন্ট ও এডমিন প্রোফাইল স্থায়ীভাবে সংরক্ষিত রাখতে এই বাটনে ক্লিক করুন।
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handlePushAllToSupabase}
-                  disabled={isPushingToSupabase}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-sm shrink-0 cursor-pointer active:scale-95 disabled:opacity-50 transition-all"
-                >
-                  {isPushingToSupabase ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4" />
-                  )}
-                  <span>{isPushingToSupabase ? 'পুশ হচ্ছে...' : 'পুশ টু সোপাবেজ'}</span>
-                </button>
-              </div>
-
-              {pushSupabaseMsg && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 flex items-center gap-2 animate-fade-in">
-                  <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span>{pushSupabaseMsg}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Supabase SQL Script & Bucket Setup */}
-            <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-3 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                    <Database className="h-4 w-4 text-[#006A4E]" />
-                    <span>সোপাবেজ এসকিউএল স্ক্রিপ্ট ও বাকেট স্কিমা (Supabase SQL & Bucket Schema)</span>
-                  </h4>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    সোপাবেজ ড্যাশবোর্ডের <code className="text-[#006A4E] font-bold">SQL Editor</code>-এ রান করার জন্য প্রয়োজনীয় সকল টেবিল, বাকেট (<code className="text-[#006A4E]">dockyard-media</code>), আরএলএস পলিসি ও ২৭টি শপের ইনিশিয়াল ডাটা।
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={handleCopySql}
-                    className="px-3.5 py-2 bg-[#006A4E] hover:bg-[#005740] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95 transition-all"
-                  >
-                    {copiedSql ? <Check className="h-3.5 w-3.5 text-[#FFFDD0]" /> : <Copy className="h-3.5 w-3.5" />}
-                    <span>{copiedSql ? 'কপি হয়েছে!' : 'এসকিউএল কপি'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDownloadSql}
-                    className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-slate-300 shadow-xs cursor-pointer active:scale-95 transition-all"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span>.sql ডাউনলোড</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowSqlPreview(!showSqlPreview)}
-                    className="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-medium border border-slate-200 cursor-pointer transition-all"
-                  >
-                    {showSqlPreview ? 'প্রিভিউ লুকান' : 'প্রিভিউ'}
-                  </button>
-                </div>
-              </div>
-
-              {showSqlPreview && (
-                <div className="mt-3 p-3 bg-slate-900 rounded-xl text-[11px] font-mono text-emerald-300 max-h-60 overflow-y-auto border border-slate-700 shadow-inner select-text">
-                  <pre className="whitespace-pre-wrap">{SUPABASE_SQL_SCHEMA}</pre>
-                </div>
-              )}
-            </div>
-
-            <p className="text-xs text-slate-600">
-              এছাড়াও অফলাইন সংরক্ষণের জন্য সিস্টেমের যাবতীয় তথ্য JSON ফাইলে এক্সপোর্ট বা ইম্পোর্ট করতে পারেন:
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={handleExportData}
-                className="py-2.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
-              >
-                <Download className="h-4 w-4 text-slate-600" />
-                <span>Download JSON Backup</span>
-              </button>
-              <label className="py-2.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-xs">
-                <Upload className="h-4 w-4 text-slate-600" />
-                <span>Restore JSON Backup</span>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleImportData}
-                  className="hidden"
-                />
-              </label>
-            </div>
-          </div>
-
           {/* Bottom Action Bar */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
             <button
@@ -2046,7 +1994,7 @@ export default function AdminPanel({
                   {/* Card Header: Code Badge + Category + Status */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-1 bg-slate-900 text-white font-mono font-bold text-xs rounded-lg shadow-xs">
+                      <span className="inline-flex items-center justify-center px-2.5 py-1 bg-gradient-to-r from-[#003828] via-[#006A4E] to-[#004d38] text-[#FFFDD0] border border-amber-400/60 rounded-lg font-mono font-black text-xs shadow-xs min-w-[70px]">
                         {ws.code}
                       </span>
                       <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 truncate max-w-[130px]">
@@ -2238,43 +2186,10 @@ export default function AdminPanel({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>SUPABASE: public.user_profile</span>
+              <span className="px-3 py-1.5 bg-[#006A4E]/10 text-[#006A4E] border border-[#006A4E]/30 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#006A4E]" />
+                <span>OFFICIAL HQ PROFILE</span>
               </span>
-            </div>
-          </div>
-
-          {/* Guide Banner */}
-          <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 uppercase tracking-wider">
-              <Info className="h-4 w-4 text-slate-600" />
-              <span>এডমিন প্রফাইল এর ডাটা ও ছবি কোথায় জমা হবে? (STORAGE MAPPING GUIDE)</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-700">
-              <div className="p-3.5 bg-white rounded-lg border border-slate-200 space-y-1.5 shadow-xs">
-                <p className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <Database className="h-3.5 w-3.5 text-slate-600" />
-                  <span>১. এডমিন প্রোফাইল ডাটা (Name, Rank, P.No)</span>
-                </p>
-                <p className="text-slate-600 leading-relaxed">
-                  Supabase ক্লাউড PostgreSQL ডাটাবেজের <strong className="text-slate-800 font-mono">public.user_profile</strong> টেবিলে নির্দিষ্ট <span className="text-slate-800 font-mono">id: 'admin_default'</span> সারিতে সরাসরি স্থায়ীভাবে সংরক্ষিত হয়।
-                </p>
-              </div>
-
-              <div className="p-3.5 bg-white rounded-lg border border-slate-200 space-y-1.5 shadow-xs">
-                <p className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <Camera className="h-3.5 w-3.5 text-slate-600" />
-                  <span>২. এডমিন ছবি (Avatar Photo Storage)</span>
-                </p>
-                <p className="text-slate-600 leading-relaxed">
-                  ছবিটি Supabase Storage-এর <strong className="text-slate-800 font-mono">profiles/</strong> বাকেটে আপলোড হয়ে সরাসরি ক্লাউড ইউআরএল তৈরি হয়, অথবা অপটিমাইজড ডাটা হিসেবে <span className="text-slate-800 font-mono">user_profile.avatar</span> কলামে জমা থাকে।
-                </p>
-              </div>
-            </div>
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] text-emerald-700 flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-              <span>ডিপ্লয়মেন্টের পর যেকোনো ডিভাইস থেকে লগইন করলেই সোপাবেজ ক্লাউড থেকে এই প্রোফাইল ও ছবি স্বয়ংক্রিয়ভাবে লোড হবে।</span>
             </div>
           </div>
 
@@ -2665,16 +2580,19 @@ export default function AdminPanel({
 
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">
-                    CATEGORY (ক্যাটাগরি)
+                    DEPARTMENT (ডিপার্টমেন্ট) *
                   </label>
-                  <input
-                    type="text"
-                    value={newUserForm.category}
+                  <select
+                    value={newUserForm.category || 'H&M'}
                     onChange={(e) => setNewUserForm({ ...newUserForm, category: e.target.value })}
-                    required
-                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 outline-none focus:border-slate-400"
-                    placeholder="e.g. Mechanical"
-                  />
+                    className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-slate-400 cursor-pointer"
+                  >
+                    {DGM_DEPARTMENTS.map(dept => (
+                      <option key={dept.code} value={dept.code}>
+                        {dept.code} - {dept.dgmTitle}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

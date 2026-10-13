@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Compass, 
   Layers, 
@@ -20,11 +21,18 @@ import {
   Ship,
   Search,
   ChevronDown,
-  Check
+  Check,
+  Gauge
 } from 'lucide-react';
 import { WARSHIP_COMPARTMENTS, ShipCompartment } from '../data/shipInspectionData';
 import { Defect, Workshop, AuthSession } from '../types';
 import WorkshopProgressAnalytics from './WorkshopProgressAnalytics';
+import { 
+  isSameShip, 
+  matchLocationToCompartment, 
+  isDefectForWorkshop, 
+  getShipPennantNumber 
+} from '../utils/shipWorkMatcher';
 
 interface Ship3DViewerProps {
   defects: Defect[];
@@ -44,7 +52,7 @@ export default function Ship3DViewer({
   onNavigateToEntry
 }: Ship3DViewerProps) {
   // Selected warship for inspection
-  const [selectedShip, setSelectedShip] = useState<string>(ships[0] || 'BNS Bangabandhu (এফ ২৫)');
+  const [selectedShip, setSelectedShip] = useState<string>(ships[0] || 'BNS Bangabandhu (F 25)');
   
   // 3D View Angle Mode
   const [viewMode, setViewMode] = useState<ViewMode>('isometric');
@@ -64,6 +72,26 @@ export default function Ship3DViewer({
 
   // Active Selected Compartment for Detailed Box
   const [activeCompartment, setActiveCompartment] = useState<ShipCompartment | null>(null);
+  const modalBodyRef = useRef<HTMLDivElement>(null);
+
+  // Automatically scroll modal body to top as soon as a compartment opens so it is immediately centered in view
+  useEffect(() => {
+    if (activeCompartment) {
+      modalBodyRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [activeCompartment]);
+
+  // Handle ESC key to dismiss modal smoothly
+  useEffect(() => {
+    if (!activeCompartment) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveCompartment(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeCompartment]);
 
   // Hovered Compartment for Quick Tooltip
   const [hoveredCompartmentId, setHoveredCompartmentId] = useState<string | null>(null);
@@ -73,45 +101,140 @@ export default function Ship3DViewer({
   const myWorkshopName = authSession?.workshopNameEn || authSession?.workshopNameBn;
   const isWorkshopUser = authSession?.role === 'workshop_user' && myWorkshopCode && myWorkshopCode !== 'HQ-ADMIN';
 
-  // Find active defects for a compartment
+  // Find active defects for a compartment on the currently selected ship
   const getCompartmentDefects = (compartment: ShipCompartment) => {
     return defects.filter(d => {
-      const matchShip = !selectedShip || d.shipName === selectedShip;
-      const matchLoc = d.location.toLowerCase().includes(compartment.locationTag.toLowerCase()) ||
-                       compartment.nameEn.toLowerCase().includes(d.location.toLowerCase()) ||
-                       d.location.includes(compartment.code);
+      const matchShip = !selectedShip || isSameShip(d.shipName, selectedShip);
+      const matchLoc = matchLocationToCompartment(d.location, compartment);
       return matchShip && matchLoc;
     });
   };
 
-  // Filter compartments by selected workshop
-  const highlightedCompartmentIds = useMemo(() => {
-    if (selectedWorkshopFilter === 'all') {
-      return new Set(WARSHIP_COMPARTMENTS.map(c => c.id));
-    }
-    const matchingIds = WARSHIP_COMPARTMENTS.filter(c => 
-      c.workshopsAssigned.some(w => w.workshopCode === selectedWorkshopFilter)
-    ).map(c => c.id);
-    return new Set(matchingIds);
-  }, [selectedWorkshopFilter]);
-
-  // Selected Workshop Entity
+  // Selected Workshop Entity from live workshops state
   const selectedWorkshopObj = useMemo(() => {
     if (selectedWorkshopFilter === 'all') return null;
-    return workshops.find(w => w.code === selectedWorkshopFilter) || null;
+    return workshops.find(w => 
+      w.code.toUpperCase() === selectedWorkshopFilter.toUpperCase() ||
+      w.id.toLowerCase() === selectedWorkshopFilter.toLowerCase()
+    ) || null;
   }, [workshops, selectedWorkshopFilter]);
+
+  // Dynamic enrichment of ship compartments matching renamed workshops & logged defects
+  const dynamicCompartments: ShipCompartment[] = useMemo(() => {
+    const wsByCode = new Map<string, Workshop>();
+    workshops.forEach(w => {
+      wsByCode.set(w.code.toUpperCase(), w);
+      wsByCode.set(w.id.toLowerCase(), w);
+      if (w.nameEn) wsByCode.set(w.nameEn.toLowerCase(), w);
+    });
+
+    return WARSHIP_COMPARTMENTS.map(comp => {
+      const compDefects = defects.filter(d => {
+        const matchShip = !selectedShip || isSameShip(d.shipName, selectedShip);
+        const matchLoc = matchLocationToCompartment(d.location, comp);
+        return matchShip && matchLoc;
+      });
+
+      // Synchronize assigned tasks with live renamed workshop entities
+      const updatedAssigned = comp.workshopsAssigned.map(assigned => {
+        const live = wsByCode.get(assigned.workshopCode.toUpperCase()) || 
+                     workshops.find(w => w.code.toUpperCase() === assigned.workshopCode.toUpperCase());
+        if (!live) return assigned;
+
+        const displayName = live.nameEn 
+          ? (live.nameBn ? `${live.nameEn} (${live.nameBn})` : live.nameEn)
+          : (live.nameBn || assigned.workshopNameBn);
+
+        let tasks = [...assigned.tasks];
+        if (live.description && live.description.trim()) {
+          tasks = [live.description.trim(), ...tasks.slice(0, 3)];
+        }
+
+        return {
+          ...assigned,
+          workshopNameBn: displayName,
+          category: live.category || assigned.category,
+          oicRankAndName: live.oicName ? `${live.oicRank || ''} ${live.oicName}`.trim() : assigned.oicRankAndName,
+          phoneExt: live.phoneExt ? live.phoneExt.replace(/^Ext:\s*/i, '') : assigned.phoneExt,
+          tasks
+        };
+      });
+
+      // Dynamically add any workshop that has logged defects at this compartment location on THIS ship
+      compDefects.forEach(d => {
+        const live = workshops.find(w => isDefectForWorkshop(d, w));
+        if (live) {
+          const alreadyIndex = updatedAssigned.findIndex(a => a.workshopCode.toUpperCase() === live.code.toUpperCase());
+          const defectTask = d.defectDescription || `${d.location}-এ মেরামত ও সমাধান কার্যক্রম`;
+          if (alreadyIndex >= 0) {
+            updatedAssigned[alreadyIndex] = {
+              ...updatedAssigned[alreadyIndex],
+              tasks: [defectTask, ...updatedAssigned[alreadyIndex].tasks.filter(t => t !== defectTask)]
+            };
+          } else {
+            updatedAssigned.unshift({
+              workshopCode: live.code,
+              workshopNameBn: live.nameEn ? (live.nameBn ? `${live.nameEn} (${live.nameBn})` : live.nameEn) : (live.nameBn || live.code),
+              category: live.category || 'Maintenance & Repair',
+              oicRankAndName: `${live.oicRank || 'Lieutenant'} ${live.oicName || ''}`.trim(),
+              phoneExt: live.phoneExt ? live.phoneExt.replace(/^Ext:\s*/i, '') : '8116',
+              tasks: [
+                defectTask,
+                `${comp.nameEn} সংক্রান্ত টেকনিক্যাল পরিদর্শন ও মেরামত`
+              ]
+            });
+          }
+        }
+      });
+
+      return {
+        ...comp,
+        workshopsAssigned: updatedAssigned
+      };
+    });
+  }, [workshops, defects, selectedShip]);
+
+  // Filter compartments by selected workshop on THIS ship
+  const highlightedCompartmentIds = useMemo(() => {
+    if (selectedWorkshopFilter === 'all') {
+      // If 'all', highlight all compartments that have pending defects on this ship, or all if none
+      const activeDefCompartments = dynamicCompartments.filter(c => {
+        const compDefs = getCompartmentDefects(c);
+        return compDefs.some(d => d.status === 'Pending');
+      }).map(c => c.id);
+
+      return new Set(activeDefCompartments.length > 0 ? activeDefCompartments : dynamicCompartments.map(c => c.id));
+    }
+
+    const targetCode = (selectedWorkshopObj?.code || selectedWorkshopFilter).toUpperCase();
+
+    // 1. Direct defects on THIS ship where this workshop has work at this compartment
+    const compartmentsWithShipWork = dynamicCompartments.filter(c => {
+      const compDefs = getCompartmentDefects(c);
+      return compDefs.some(d => isDefectForWorkshop(d, selectedWorkshopObj || targetCode));
+    }).map(c => c.id);
+
+    // 2. Designated routine maintenance compartments for this workshop
+    const routineStationIds = dynamicCompartments.filter(c => {
+      return c.workshopsAssigned.some(w => {
+        const wCode = w.workshopCode.toUpperCase();
+        return wCode === targetCode || (selectedWorkshopObj && wCode === selectedWorkshopObj.code.toUpperCase());
+      });
+    }).map(c => c.id);
+
+    // Combine all compartments where this workshop has work (active defects or assigned duties)
+    return new Set([...compartmentsWithShipWork, ...routineStationIds]);
+  }, [dynamicCompartments, selectedWorkshopFilter, selectedWorkshopObj, defects, selectedShip]);
 
   // Signaled compartments assigned to selected workshop
   const signaledCompartments = useMemo(() => {
-    if (selectedWorkshopFilter === 'all') return WARSHIP_COMPARTMENTS;
-    return WARSHIP_COMPARTMENTS.filter(c => 
-      c.workshopsAssigned.some(w => w.workshopCode === selectedWorkshopFilter)
-    );
-  }, [selectedWorkshopFilter]);
+    if (selectedWorkshopFilter === 'all') return dynamicCompartments;
+    return dynamicCompartments.filter(c => highlightedCompartmentIds.has(c.id));
+  }, [dynamicCompartments, highlightedCompartmentIds, selectedWorkshopFilter]);
 
   // Count active defects in ship
   const shipDefects = useMemo(() => {
-    return defects.filter(d => !selectedShip || d.shipName === selectedShip);
+    return defects.filter(d => !selectedShip || isSameShip(d.shipName, selectedShip));
   }, [defects, selectedShip]);
 
   const pendingShipDefectsCount = useMemo(() => {
@@ -128,7 +251,9 @@ export default function Ship3DViewer({
 
   // Handle opening detailed dossier
   const handleOpenDetails = (compartment: ShipCompartment) => {
-    setActiveCompartment(compartment);
+    // Keep active compartment updated with live dynamic data
+    const liveComp = dynamicCompartments.find(c => c.id === compartment.id) || compartment;
+    setActiveCompartment(liveComp);
   };
 
   return (
@@ -140,9 +265,17 @@ export default function Ship3DViewer({
       <WorkshopProgressAnalytics
         workshops={workshops}
         defects={defects}
+        ships={ships}
+        selectedShip={selectedShip}
+        onSelectShip={(ship) => setSelectedShip(ship)}
         selectedWorkshopFilter={selectedWorkshopFilter}
         onSelectWorkshop={(code) => setSelectedWorkshopFilter(code)}
         authSession={authSession}
+        onFocusCompartment={(compId) => {
+          const comp = dynamicCompartments.find(c => c.id === compId);
+          if (comp) handleOpenDetails(comp);
+        }}
+        onNavigateToEntry={onNavigateToEntry}
       />
 
       {/* =========================================================================
@@ -453,7 +586,7 @@ export default function Ship3DViewer({
 
               {/* Hull Pennant Number "F 25" (or active ship designation) */}
               <text x="840" y="325" fill="#f8fafc" fontSize="22" fontWeight="900" fontFamily="sans-serif" letterSpacing="2" opacity="0.9">
-                157
+                {getShipPennantNumber(selectedShip)}
               </text>
 
               {/* X-Ray Cutaway Compartment Overlays (visible in xray view) */}
@@ -481,7 +614,7 @@ export default function Ship3DViewer({
             {/* =========================================================================
                 INTERACTIVE COMPARTMENT HOTSPOT BEACONS (ক্লিকযোগ্য অংশসমূহ)
             ========================================================================= */}
-            {WARSHIP_COMPARTMENTS.map((compartment) => {
+            {dynamicCompartments.map((compartment) => {
               // Calculate coordinates based on view mode
               let posX = compartment.posX;
               let posY = compartment.posY;
@@ -498,12 +631,34 @@ export default function Ship3DViewer({
               const isMyShopAssigned = myWorkshopCode ? compartment.workshopsAssigned.some(w => w.workshopCode === myWorkshopCode) : false;
               const isHovered = hoveredCompartmentId === compartment.id;
 
+              // Find defects at this compartment for the currently selected workshop on this ship
+              const wsDefectsOnShip = compDefects.filter(d => 
+                selectedWorkshopFilter === 'all'
+                  ? true
+                  : isDefectForWorkshop(d, selectedWorkshopObj || selectedWorkshopFilter)
+              );
+              const hasWsDefects = wsDefectsOnShip.some(d => d.status === 'Pending');
+
               // Find assigned task for the currently selected workshop
               const assignedTask = selectedWorkshopFilter === 'all'
                 ? compartment.workshopsAssigned[0]
-                : compartment.workshopsAssigned.find(w => w.workshopCode === selectedWorkshopFilter);
+                : compartment.workshopsAssigned.find(w => 
+                    w.workshopCode.toUpperCase() === (selectedWorkshopObj?.code || selectedWorkshopFilter).toUpperCase()
+                  ) || compartment.workshopsAssigned[0];
               
-              const isSignaled = selectedWorkshopFilter === 'all' || Boolean(assignedTask);
+              const isSignaled = selectedWorkshopFilter === 'all' 
+                ? (hasDefects || highlightedCompartmentIds.has(compartment.id))
+                : highlightedCompartmentIds.has(compartment.id);
+
+              // 100% STRICT REQUIREMENT:
+              // When logged in as a workshop user or filtered to a workshop, ONLY show compartments where THIS workshop has work or duties!
+              // Other workshops' compartments and signals MUST NOT be shown!
+              if (selectedWorkshopFilter !== 'all' && !isSignaled) {
+                return null;
+              }
+
+              const wsHasPending = hasWsDefects || (selectedWorkshopFilter === 'all' && hasDefects);
+              const wsHasSolved = wsDefectsOnShip.some(d => d.status === 'Solved');
 
               return (
                 <div
@@ -512,13 +667,9 @@ export default function Ship3DViewer({
                     left: `${posX}%`,
                     top: `${posY}%`,
                     transform: 'translate(-50%, -50%)',
-                    zIndex: isHovered ? 50 : isSignaled && selectedWorkshopFilter !== 'all' ? 35 : 20
+                    zIndex: isHovered ? 50 : wsHasPending ? 40 : 25
                   }}
-                  className={`absolute transition-all duration-300 ${
-                    isSignaled 
-                      ? 'opacity-100 scale-100' 
-                      : 'opacity-20 scale-75 blur-[0.6px] pointer-events-none sm:pointer-events-auto'
-                  }`}
+                  className="absolute transition-all duration-300 opacity-100 scale-100"
                   onMouseEnter={() => setHoveredCompartmentId(compartment.id)}
                   onMouseLeave={() => setHoveredCompartmentId(null)}
                 >
@@ -526,29 +677,45 @@ export default function Ship3DViewer({
                   <div className="relative group flex flex-col items-center">
                     
                     {/* Concentric Signal Waves */}
-                    {isSignaled && (
-                      <>
-                        <span className={`absolute -inset-2.5 rounded-full animate-ping opacity-60 pointer-events-none ${
-                          hasDefects 
-                            ? 'bg-rose-500' 
-                            : selectedWorkshopFilter !== 'all'
-                            ? 'bg-blue-500'
-                            : isMyShopAssigned 
-                            ? 'bg-amber-500' 
-                            : 'bg-slate-400'
-                        }`}></span>
-                      </>
+                    {wsHasPending ? (
+                      <span className="absolute -inset-3 rounded-full animate-ping opacity-75 pointer-events-none bg-rose-500"></span>
+                    ) : wsHasSolved ? (
+                      <span className="absolute -inset-2.5 rounded-full animate-ping opacity-40 pointer-events-none bg-emerald-500"></span>
+                    ) : (
+                      <span className="absolute -inset-2 rounded-full animate-ping opacity-30 pointer-events-none bg-sky-400"></span>
                     )}
+
+                    {/* Floating Tactical Signal Pill */}
+                    {wsHasPending ? (
+                      <span className="absolute -top-6 whitespace-nowrap px-2 py-0.5 rounded-full bg-rose-600 text-white text-[9px] font-black shadow-md uppercase tracking-wider flex items-center gap-1 z-10 animate-bounce">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                        কাজ সিগনাল ({wsDefectsOnShip.filter(d => d.status === 'Pending').length || 1})
+                      </span>
+                    ) : wsHasSolved ? (
+                      <span className="absolute -top-5.5 whitespace-nowrap px-2 py-0.5 rounded-full bg-emerald-700 text-white text-[9px] font-bold shadow-sm uppercase tracking-wider z-10">
+                        ✓ সম্পন্ন
+                      </span>
+                    ) : selectedWorkshopFilter !== 'all' ? (
+                      <span className="absolute -top-5.5 whitespace-nowrap px-2 py-0.5 rounded-full bg-[#006A4E] text-[#FFFDD0] text-[9px] font-bold shadow-sm uppercase tracking-wider z-10">
+                        নিয়মিত স্টেশন
+                      </span>
+                    ) : isMyShopAssigned ? (
+                      <span className="absolute -top-5.5 whitespace-nowrap px-2 py-0.5 rounded-full bg-amber-500 text-white text-[9px] font-bold shadow-xs uppercase z-10">
+                        MY SHOP
+                      </span>
+                    ) : null}
 
                     {/* Outer Beacon Button */}
                     <button
                       type="button"
                       onClick={() => handleOpenDetails(compartment)}
-                      className={`relative w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-[11px] shadow-md transition-transform group-hover:scale-110 border-2 cursor-pointer focus:outline-none ${
-                        hasDefects
-                          ? 'bg-rose-600 text-white border-white ring-2 ring-rose-300 animate-bounce'
-                          : selectedWorkshopFilter !== 'all' && Boolean(assignedTask)
-                          ? 'bg-slate-900 text-white border-white ring-2 ring-slate-400'
+                      className={`relative w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-[11px] shadow-md transition-transform group-hover:scale-115 border-2 cursor-pointer focus:outline-none ${
+                        wsHasPending
+                          ? 'bg-rose-600 text-white border-white ring-4 ring-rose-400/80 animate-pulse'
+                          : wsHasSolved
+                          ? 'bg-emerald-600 text-white border-white ring-2 ring-emerald-300'
+                          : selectedWorkshopFilter !== 'all'
+                          ? 'bg-[#003828] text-[#FFFDD0] border-amber-300 ring-2 ring-amber-400'
                           : isMyShopAssigned
                           ? 'bg-amber-500 text-white border-white ring-2 ring-amber-300'
                           : 'bg-slate-800 text-white border-slate-200 hover:bg-slate-900'
@@ -566,33 +733,43 @@ export default function Ship3DViewer({
                     )}
 
                     {/* Work Signal Callout */}
-                    {selectedWorkshopFilter !== 'all' && assignedTask ? (
+                    {selectedWorkshopFilter !== 'all' && assignedTask && isSignaled ? (
                       <div
                         onClick={() => handleOpenDetails(compartment)}
-                        className={`mt-1.5 px-2.5 py-1.5 rounded-xl text-left shadow-sm border transition-all cursor-pointer group-hover:scale-105 min-w-[150px] max-w-[210px] ${
-                          hasDefects
-                            ? 'bg-rose-50 border-rose-200 text-rose-900'
+                        className={`mt-1.5 px-2.5 py-1.5 rounded-xl text-left shadow-sm border transition-all cursor-pointer group-hover:scale-105 min-w-[160px] max-w-[240px] ${
+                          hasWsDefects || hasDefects
+                            ? 'bg-rose-50 border-rose-300 text-rose-900 ring-1 ring-rose-200'
                             : 'bg-white border-slate-200 text-slate-800 hover:border-slate-300'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-1 mb-0.5 border-b border-slate-100 pb-0.5">
-                          <div className="flex items-center gap-1">
-                            <span className={`w-2 h-2 rounded-full ${hasDefects ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`}></span>
-                            <span className="text-[10px] font-bold text-slate-700 uppercase">
-                              {selectedWorkshopFilter}
+                        <div className="flex items-center justify-between gap-1 mb-1 border-b border-slate-100 pb-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full ${hasWsDefects || hasDefects ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`}></span>
+                            <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-gradient-to-r from-[#003828] via-[#006A4E] to-[#004d38] text-[#FFFDD0] border border-amber-400/50 text-[9px] font-mono font-black tracking-wider uppercase shadow-2xs">
+                              {selectedWorkshopObj?.code || selectedWorkshopFilter}
                             </span>
                           </div>
-                          <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 px-1 rounded">
+                          <span className="text-[9px] font-semibold text-slate-500 bg-slate-100 px-1 rounded font-mono">
                             {compartment.code}
                           </span>
                         </div>
-                        <div className="text-[11px] font-medium leading-snug text-slate-800 line-clamp-2">
-                          {assignedTask.tasks[0]}
+                        <div className="text-[10px] font-bold text-slate-900 truncate">
+                          {selectedWorkshopObj?.nameEn || assignedTask.workshopNameBn}
                         </div>
-                        {hasDefects && (
+                        {wsDefectsOnShip.length > 0 && wsDefectsOnShip[0].location ? (
+                          <div className="text-[10px] font-bold text-[#006A4E] truncate mt-0.5">
+                            📍 {wsDefectsOnShip[0].location}
+                          </div>
+                        ) : null}
+                        <div className="text-[11px] font-medium leading-snug text-slate-700 line-clamp-2 mt-0.5">
+                          {wsDefectsOnShip.length > 0
+                            ? (wsDefectsOnShip[0].defectDescription || `${wsDefectsOnShip[0].location} মেরামত ও পরিদর্শন`)
+                            : assignedTask.tasks[0]}
+                        </div>
+                        {(hasWsDefects || hasDefects) && (
                           <div className="mt-1 text-[9px] font-semibold text-rose-700 flex items-center gap-1 bg-rose-100/70 px-1.5 py-0.5 rounded">
                             <AlertTriangle className="h-3 w-3 text-rose-600" />
-                            <span>ডিফেক্ট বিদ্যমান</span>
+                            <span>ডিফেক্ট বিদ্যমান ({wsDefectsOnShip.filter(d => d.status === 'Pending').length || 1}টি)</span>
                           </div>
                         )}
                       </div>
@@ -601,15 +778,16 @@ export default function Ship3DViewer({
                       <button
                         type="button"
                         onClick={() => handleOpenDetails(compartment)}
-                        className={`mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-tight whitespace-nowrap shadow-xs border transition-all cursor-pointer ${
+                        className={`mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-tight whitespace-nowrap shadow-xs border transition-all cursor-pointer flex items-center gap-1 ${
                           hasDefects
-                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            ? 'bg-rose-50 text-rose-700 border-rose-300 ring-1 ring-rose-200'
                             : isMyShopAssigned
                             ? 'bg-amber-50 text-amber-800 border-amber-200'
                             : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                         }`}
                       >
-                        {compartment.nameEn.split(' ')[0]} {compartment.nameEn.split(' ')[1] || ''}
+                        {hasDefects && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>}
+                        <span>{compartment.nameEn.split(' ')[0]} {compartment.nameEn.split(' ')[1] || ''}</span>
                       </button>
                     )}
                   </div>
@@ -668,6 +846,41 @@ export default function Ship3DViewer({
                 </div>
               );
             })}
+
+            {/* Empty State Banner if selected workshop has no work on this ship */}
+            {selectedWorkshopFilter !== 'all' && highlightedCompartmentIds.size === 0 && (
+              <div className="absolute inset-0 z-30 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-md text-center shadow-2xl space-y-3.5">
+                  <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-xs">
+                    <Radio className="h-6 w-6 text-amber-600 animate-pulse" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm sm:text-base font-bold text-slate-900">
+                      "{selectedShip}" যুদ্ধজাহাজে {selectedWorkshopObj?.nameEn || selectedWorkshopFilter}-এর কোনো সক্রিয় সিগনাল নেই
+                    </h4>
+                    <p className="text-xs text-slate-600 leading-relaxed text-justify mt-1">
+                      বর্তমানে এই জাহাজের কোনো লোকেশনে এই শপের বকেয়া বা চলমান কাজের সিগনাল নিবন্ধিত নেই। আপনি চাইলে নতুন ডিফেক্ট বা কাজের এন্ট্রি যুক্ত করতে পারেন অথবা অন্য যুদ্ধজাহাজ নির্বাচন করতে পারেন।
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-2.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => onNavigateToEntry?.(undefined, selectedWorkshopObj?.nameEn || selectedWorkshopFilter)}
+                      className="px-4 py-2 bg-[#006A4E] text-[#FFFDD0] rounded-xl text-xs font-bold hover:bg-[#004d38] transition-all cursor-pointer shadow-xs"
+                    >
+                      নতুন কাজের এন্ট্রি দিন
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedWorkshopFilter('all')}
+                      className="px-3.5 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-200 transition-all cursor-pointer"
+                    >
+                      সকল কম্পার্টমেন্ট দেখুন
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -696,37 +909,54 @@ export default function Ship3DViewer({
       </div>
 
       {/* =========================================================================
-          3. DETAILED COMPARTMENT INFORMATION BOX / MODAL (হোম পেজের ডায়ালগ বক্সের উপরের অংশে নোঙর এর ছবি থাকবে)
+          3. DETAILED COMPARTMENT INFORMATION BOX / MODAL
+          Fixed viewport positioning - centered right in front of user with fixed header & footer
       ========================================================================= */}
-      {activeCompartment && (
+      {/* =========================================================================
+          3. DETAILED COMPARTMENT INFORMATION BOX / MODAL
+          Rendered via createPortal directly into document.body to ensure it is 
+          completely immune to parent transforms and stays 100% centered in viewport
+      ========================================================================= */}
+      {activeCompartment && typeof document !== 'undefined' && createPortal(
         <div 
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-fade-in"
+          className="fixed inset-0 z-[999999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md overflow-hidden select-none"
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
           onClick={() => setActiveCompartment(null)}
         >
           <div 
-            className="bg-white border border-slate-200 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 sm:p-7 text-slate-800 shadow-xl relative space-y-5"
+            className="bg-white border border-slate-300 rounded-2xl w-full max-w-4xl h-[86vh] max-h-[780px] min-h-[460px] flex flex-col shadow-2xl overflow-hidden relative select-text my-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Top Anchor & Crest Header Section (হোম পেজের ডায়ালগ বক্সের উপরের অংশে নোঙর এর ছবি) */}
-            <div className="flex items-center justify-between bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl p-1 bg-white border border-slate-200 shadow-xs flex items-center justify-center shrink-0">
+            {/* 1. FIXED TOP HEADER: Anchor Crest, Titles, Compartment Code & Close Button */}
+            <div className="shrink-0 bg-gradient-to-r from-slate-50 via-white to-slate-50 p-3.5 sm:p-4 border-b border-slate-200 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-xl p-1 bg-white border border-slate-200 shadow-xs flex items-center justify-center shrink-0">
                   <img 
                     src="/anchor.jpg" 
                     alt="Bangladesh Navy Crest Anchor" 
                     className="w-full h-full object-contain rounded-lg" 
                   />
                 </div>
-                <div>
-                  <h4 className="text-sm sm:text-base font-bold text-slate-900">
-                    BANGLADESH NAVY DOCKYARD CHATTOGRAM
-                  </h4>
-                  <p className="text-xs text-slate-600 font-medium">
-                    যুদ্ধজাহাজ কারিগরি পরিদর্শন ও কম্পার্টমেন্ট ডজিয়ার
-                  </p>
-                  <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-slate-200 text-[10px] text-slate-700 font-medium uppercase">
-                    NAVAL ARCHIVE & MAINTENANCE
-                  </span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-0.5 rounded-md bg-[#006A4E] text-[#FFFDD0] font-bold text-[10px] tracking-wider uppercase shadow-2xs font-mono">
+                      {activeCompartment.code}
+                    </span>
+                    <h3 className="text-sm sm:text-base font-extrabold text-slate-900 truncate">
+                      {activeCompartment.nameEn}
+                    </h3>
+                    <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+                      ({activeCompartment.nameBn})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap mt-1">
+                    <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                      📍 {activeCompartment.deckLevel}
+                    </span>
+                    <span className="text-[11px] text-[#006A4E] font-bold bg-[#006A4E]/10 px-2 py-0.5 rounded border border-[#006A4E]/20">
+                      ⚓ {selectedShip}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -734,241 +964,267 @@ export default function Ship3DViewer({
               <button
                 type="button"
                 onClick={() => setActiveCompartment(null)}
-                className="p-2 rounded-xl bg-slate-200/80 hover:bg-slate-300 text-slate-700 transition-all cursor-pointer shrink-0"
+                className="p-2 sm:p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer shrink-0"
                 title="বন্ধ করুন"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Header of the Compartment */}
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-11 h-11 bg-slate-900 text-white rounded-xl font-bold text-base flex items-center justify-center shadow-xs shrink-0">
-                  {activeCompartment.code}
+            {/* 2. SCROLLABLE BODY: Overview, Tech Specs, Workshops & Defect Log (Strict text-justify & clean alignment) */}
+            <div 
+              ref={modalBodyRef}
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5 text-justify"
+            >
+              
+              {/* Overview & Technical Specs Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2 bg-slate-50 p-4 sm:p-4.5 rounded-xl border border-slate-200 space-y-2">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase flex items-center gap-1.5 tracking-wider">
+                    <Info className="h-4 w-4 text-[#006A4E] shrink-0" />
+                    <span>কম্পার্টমেন্ট ভূমিকা ও কারিগরি বিবরণ (Overview)</span>
+                  </h4>
+                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed text-justify">
+                    {activeCompartment.overview}
+                  </p>
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">
-                      {activeCompartment.deckLevel}
-                    </span>
-                    <span className="text-xs text-slate-500 font-medium">
-                      জাহাজ: {selectedShip}
-                    </span>
+
+                <div className="bg-slate-50 p-4 sm:p-4.5 rounded-xl border border-slate-200 space-y-2.5">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase flex items-center gap-1.5 tracking-wider">
+                    <Gauge className="h-4 w-4 text-slate-600 shrink-0" />
+                    <span>স্পেসিফিকেশন (Specifications)</span>
+                  </h4>
+                  <div className="space-y-2">
+                    {activeCompartment.specifications.map((spec, idx) => (
+                      <div key={idx} className="text-xs border-b border-slate-200/80 pb-1.5 last:border-0 last:pb-0 flex items-center justify-between gap-2">
+                        <span className="text-slate-500 block text-[11px] font-medium">{spec.label}</span>
+                        <span className="text-slate-900 font-bold text-right">{spec.value}</span>
+                      </div>
+                    ))}
                   </div>
-                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 mt-1 truncate">
-                    {activeCompartment.nameEn}
-                  </h3>
                 </div>
               </div>
-            </div>
 
-            {/* Overview & Technical Specs Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <h4 className="text-xs font-bold text-slate-900 uppercase mb-1.5 flex items-center gap-1.5">
-                  <Info className="h-3.5 w-3.5 text-slate-600" />
-                  কম্পার্টমেন্ট বিবরণ ও ভূমিকা (Overview)
-                </h4>
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  {activeCompartment.overview}
-                </p>
-              </div>
+              {/* =========================================================================
+                  RESPONSIBLE WORKSHOPS & SCOPE OF WORK
+              ========================================================================= */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2 flex-wrap gap-2">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase flex items-center gap-2 tracking-wider">
+                    <Wrench className="h-4 w-4 text-[#006A4E] shrink-0" />
+                    <span>দায়িত্বপ্রাপ্ত ওয়ার্কশপ ও কাজের পরিধি ({activeCompartment.workshopsAssigned.length} টি শপ)</span>
+                  </h4>
+                  {selectedWorkshopFilter !== 'all' && (
+                    <span className="text-[11px] text-[#006A4E] font-bold bg-[#006A4E]/10 px-2 py-0.5 rounded border border-[#006A4E]/20">
+                      নির্বাচিত শপ: {selectedWorkshopObj?.nameEn || selectedWorkshopFilter}
+                    </span>
+                  )}
+                </div>
 
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
-                <h4 className="text-xs font-bold text-slate-900 uppercase mb-1">
-                  কারিগরি বিবরণ (Specifications)
-                </h4>
-                {activeCompartment.specifications.map((spec, idx) => (
-                  <div key={idx} className="text-xs border-b border-slate-200/80 pb-1.5 last:border-0 last:pb-0">
-                    <span className="text-slate-500 block text-[11px]">{spec.label}</span>
-                    <span className="text-slate-900 font-semibold">{spec.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {[...activeCompartment.workshopsAssigned].sort((a, b) => {
+                    const targetCode = (selectedWorkshopObj?.code || selectedWorkshopFilter).toUpperCase();
+                    if (a.workshopCode.toUpperCase() === targetCode) return -1;
+                    if (b.workshopCode.toUpperCase() === targetCode) return 1;
+                    if (myWorkshopCode && a.workshopCode.toUpperCase() === myWorkshopCode.toUpperCase()) return -1;
+                    if (myWorkshopCode && b.workshopCode.toUpperCase() === myWorkshopCode.toUpperCase()) return 1;
+                    return 0;
+                  }).map((wsItem) => {
+                    const liveWs = workshops.find(w => 
+                      w.code.toUpperCase() === wsItem.workshopCode.toUpperCase() || 
+                      w.id.toLowerCase() === wsItem.workshopCode.toLowerCase()
+                    );
+                    const displayName = liveWs 
+                      ? (liveWs.nameEn ? `${liveWs.nameEn}${liveWs.nameBn ? ` (${liveWs.nameBn})` : ''}` : liveWs.nameBn) 
+                      : (wsItem.workshopNameEn || wsItem.workshopNameBn);
+                    const displayCategory = liveWs?.category || wsItem.category;
+                    const displayOic = liveWs?.oicName ? `${liveWs.oicRank || ''} ${liveWs.oicName}`.trim() : wsItem.oicRankAndName;
+                    const displayExt = liveWs?.phoneExt ? liveWs.phoneExt.replace(/^Ext:\s*/i, '') : wsItem.phoneExt;
+                    const isUserShop = myWorkshopCode && wsItem.workshopCode.toUpperCase() === myWorkshopCode.toUpperCase();
+                    const isSignaledShop = selectedWorkshopFilter !== 'all' && (
+                      wsItem.workshopCode.toUpperCase() === selectedWorkshopFilter.toUpperCase() || 
+                      (selectedWorkshopObj && wsItem.workshopCode.toUpperCase() === selectedWorkshopObj.code.toUpperCase())
+                    );
 
-            {/* =========================================================================
-                RESPONSIBLE WORKSHOPS & DETAILED TASKS
-            ========================================================================= */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Wrench className="h-4 w-4 text-slate-600" />
-                  <span>দায়িত্বপ্রাপ্ত ওয়ার্কশপ ও কাজের পরিধি ({activeCompartment.workshopsAssigned.length} টি শপ)</span>
-                </h4>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {[...activeCompartment.workshopsAssigned].sort((a, b) => {
-                  if (a.workshopCode === selectedWorkshopFilter) return -1;
-                  if (b.workshopCode === selectedWorkshopFilter) return 1;
-                  if (a.workshopCode === myWorkshopCode) return -1;
-                  if (b.workshopCode === myWorkshopCode) return 1;
-                  return 0;
-                }).map((wsItem) => {
-                  const isUserShop = wsItem.workshopCode === myWorkshopCode;
-                  const isSignaledShop = wsItem.workshopCode === selectedWorkshopFilter;
-                  return (
-                    <div 
-                      key={wsItem.workshopCode} 
-                      className={`p-4 rounded-xl border transition-all ${
-                        isSignaledShop
-                          ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-300'
-                          : isUserShop 
-                          ? 'bg-amber-50/50 border-amber-200' 
-                          : 'bg-white border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      {/* Workshop Header */}
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                            isSignaledShop || isUserShop ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-800'
-                          }`}>
-                            {wsItem.workshopCode}
-                          </span>
-                          <div>
-                            <h5 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
-                              {wsItem.workshopNameEn || wsItem.workshopNameBn}
-                            </h5>
-                            <span className="text-[11px] text-slate-500">
-                              বিভাগ: {wsItem.category}
+                    return (
+                      <div 
+                        key={wsItem.workshopCode} 
+                        className={`p-4 rounded-xl border transition-all text-justify ${
+                          isSignaledShop
+                            ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-300/80 shadow-xs'
+                            : isUserShop 
+                            ? 'bg-amber-50/50 border-amber-200' 
+                            : 'bg-white border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        {/* Workshop Header */}
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-lg bg-gradient-to-r from-[#003828] via-[#006A4E] to-[#004d38] text-[#FFFDD0] border border-amber-400/60 text-xs font-mono font-black tracking-wider shadow-xs">
+                              {wsItem.workshopCode}
                             </span>
+                            <div>
+                              <h5 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
+                                {displayName}
+                              </h5>
+                              <span className="text-[11px] text-slate-500">
+                                বিভাগ: {displayCategory}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {isSignaledShop && (
+                              <span className="px-2 py-0.5 bg-amber-100 text-amber-900 font-bold text-[10px] rounded-full flex items-center gap-1 border border-amber-300">
+                                <Radio className="h-2.5 w-2.5 text-amber-700 animate-pulse" />
+                                সক্রিয় শপ
+                              </span>
+                            )}
+                            {isUserShop && !isSignaledShop && (
+                              <span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-semibold text-[10px] rounded-full">
+                                আমার শপ
+                              </span>
+                            )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {isSignaledShop && (
-                            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-semibold text-[10px] rounded-full flex items-center gap-1">
-                              <Radio className="h-2.5 w-2.5" />
-                              সিগনাল
-                            </span>
-                          )}
-                          {isUserShop && !isSignaledShop && (
-                            <span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-semibold text-[10px] rounded-full">
-                              আমার শপ
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Workshop OIC & Intercom */}
-                      <div className="flex items-center justify-between text-xs text-slate-600 mb-2.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
-                        <span className="truncate">OIC: {wsItem.oicRankAndName}</span>
-                        <span className="text-slate-800 font-semibold shrink-0 flex items-center gap-1">
-                          <Phone className="h-3 w-3 text-slate-400" /> Ext: {wsItem.phoneExt}
-                        </span>
-                      </div>
-
-                      {/* Specific Tasks List */}
-                      <div className="space-y-1">
-                        <span className="text-[11px] text-slate-500 font-semibold uppercase block">
-                          কাজের পরিধি (Scope of Work):
-                        </span>
-                        <ul className="space-y-1">
-                          {wsItem.tasks.map((task, tIdx) => (
-                            <li key={tIdx} className="text-xs text-slate-700 flex items-start gap-1.5">
-                              <span className="text-slate-400 mt-0.5 shrink-0">•</span>
-                              <span>{task}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* =========================================================================
-                ACTIVE DEFECTS FOR THIS SECTION IN THE SYSTEM DATABASE
-            ========================================================================= */}
-            <div className="bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-200 space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-slate-900 uppercase flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-slate-600" />
-                  <span>কম্পার্টমেন্ট ডিফেক্ট লগ ({getCompartmentDefects(activeCompartment).length})</span>
-                </h4>
-                <span className="text-xs text-slate-500">
-                  যুদ্ধজাহাজ: {selectedShip}
-                </span>
-              </div>
-
-              {getCompartmentDefects(activeCompartment).length === 0 ? (
-                <div className="flex items-center gap-3 bg-white border border-slate-200 p-3.5 rounded-xl text-slate-700 text-xs">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                  <span>এই কম্পার্টমেন্টে বর্তমানে কোনো ডিফেক্ট নেই। সকল সিস্টেম সচল।</span>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {getCompartmentDefects(activeCompartment).map(def => (
-                    <div 
-                      key={def.id} 
-                      className="p-3.5 bg-white border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            def.status === 'Solved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}>
-                            {def.status === 'Solved' ? 'সমাধানকৃত' : 'চলমান'}
+                        {/* Workshop OIC & Intercom */}
+                        <div className="flex items-center justify-between text-xs text-slate-600 mb-2.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
+                          <span className="truncate">OIC: {displayOic}</span>
+                          <span className="text-slate-800 font-semibold shrink-0 flex items-center gap-1 font-mono">
+                            <Phone className="h-3 w-3 text-[#006A4E]" /> Ext: {displayExt}
                           </span>
-                          <span className="text-slate-400 text-[11px]">{def.defectDate}</span>
-                          <span className="text-slate-600 text-[11px] font-medium">ওয়ার্কশপ: {def.workshop || 'অ্যাসাইনড'}</span>
                         </div>
-                        <p className="text-slate-800 mt-1 font-medium">
-                          {def.defectDescription || 'ডিফেক্ট বিবরণ রেজিস্ট্রি করা হয়েছে।'}
-                        </p>
+
+                        {/* Specific Tasks List with text-justify */}
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
+                            কাজের পরিধি (Scope of Work):
+                          </span>
+                          <ul className="space-y-1.5">
+                            {wsItem.tasks.map((task, tIdx) => (
+                              <li key={tIdx} className="text-xs text-slate-700 flex items-start gap-1.5 text-justify leading-relaxed">
+                                <span className="text-[#006A4E] mt-0.5 shrink-0 font-bold">•</span>
+                                <span className="text-justify">{task}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
-
-                      {def.defectImage && (
-                        <img 
-                          src={def.defectImage} 
-                          alt="Defect" 
-                          referrerPolicy="no-referrer"
-                          className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0" 
-                        />
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              )}
-            </div>
-
-            {/* Action Buttons in Footer */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
-              <div className="text-xs text-slate-500">
-                কম্পার্টমেন্ট কোড: <strong className="text-slate-800">{activeCompartment.code}</strong> ({activeCompartment.locationTag})
               </div>
 
-              <div className="flex items-center gap-3">
+              {/* =========================================================================
+                  ACTIVE DEFECTS FOR THIS COMPARTMENT ON THIS SHIP
+              ========================================================================= */}
+              <div className="bg-slate-50 p-4 sm:p-5 rounded-xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase flex items-center gap-2 tracking-wider">
+                    <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+                    <span>কম্পার্টমেন্ট ডিফেক্ট ও কাজের লগ ({getCompartmentDefects(activeCompartment).length} টি)</span>
+                  </h4>
+                  <span className="text-xs text-[#006A4E] font-bold">
+                    যুদ্ধজাহাজ: {selectedShip}
+                  </span>
+                </div>
+
+                {getCompartmentDefects(activeCompartment).length === 0 ? (
+                  <div className="flex items-center gap-3 bg-white border border-slate-200 p-4 rounded-xl text-slate-700 text-xs">
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                    <span className="leading-relaxed text-justify">
+                      "{selectedShip}" জাহাজের এই কম্পার্টমেন্টে বর্তমানে কোনো অনিষ্পন্ন ডিফেক্ট নেই। সকল প্রযুক্তিগত যন্ত্রপাতি ও সিস্টেম সচল রয়েছে।
+                    </span>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {getCompartmentDefects(activeCompartment).map(def => {
+                      const isTargetWsDef = selectedWorkshopFilter !== 'all' && isDefectForWorkshop(def, selectedWorkshopObj || selectedWorkshopFilter);
+                      return (
+                        <div 
+                          key={def.id} 
+                          className={`p-4 bg-white border rounded-xl flex flex-col sm:flex-row sm:items-start justify-between gap-3 text-xs shadow-xs transition-all ${
+                            isTargetWsDef ? 'border-[#006A4E]/50 ring-1 ring-[#006A4E]/30 bg-emerald-50/20' : 'border-slate-200'
+                          }`}
+                        >
+                          <div className="min-w-0 space-y-1.5 flex-1 text-justify">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                def.status === 'Solved' 
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                  : 'bg-rose-50 text-rose-700 border border-rose-200 animate-pulse'
+                              }`}>
+                                {def.status === 'Solved' ? 'সমাধানকৃত' : 'চলমান কাজ সিগনাল'}
+                              </span>
+                              <span className="text-slate-400 text-[11px] font-mono">{def.defectDate}</span>
+                              <span className="text-slate-800 text-[11px] font-bold bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                📍 {def.location}
+                              </span>
+                              <span className="text-[#006A4E] text-[11px] font-extrabold bg-[#006A4E]/10 px-2 py-0.5 rounded border border-[#006A4E]/20">
+                                শপ: {def.workshop || def.workshopCode || 'অ্যাসাইনড'}
+                              </span>
+                            </div>
+                            <p className="text-slate-800 font-medium leading-relaxed text-justify">
+                              {def.defectDescription || 'ডিফেক্ট বিবরণ রেজিস্ট্রি করা হয়েছে।'}
+                            </p>
+                            {def.status === 'Solved' && def.solutionDescription && (
+                              <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200/80 text-[11px] text-emerald-800 leading-relaxed text-justify">
+                                <strong>সমাধানের বিবরণ ({def.solutionDate || 'সম্পন্ন'}):</strong> {def.solutionDescription}
+                              </div>
+                            )}
+                          </div>
+
+                          {def.defectImage && (
+                            <img 
+                              src={def.defectImage} 
+                              alt="Defect" 
+                              referrerPolicy="no-referrer"
+                              className="w-16 h-16 rounded-lg object-cover border border-slate-200 shrink-0" 
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 3. FIXED BOTTOM ACTION FOOTER */}
+            <div className="shrink-0 bg-slate-50 border-t border-slate-200 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
+              <div className="text-xs text-slate-600 font-medium">
+                কম্পার্টমেন্ট: <strong className="text-slate-900 font-bold">{activeCompartment.code}</strong> • {activeCompartment.locationTag}
+              </div>
+
+              <div className="flex items-center gap-2.5">
                 {onNavigateToEntry && (
                   <button
                     type="button"
                     onClick={() => {
-                      const firstWs = activeCompartment.workshopsAssigned[0]?.workshopCode || myWorkshopCode;
+                      const firstWs = (selectedWorkshopObj?.code || activeCompartment.workshopsAssigned[0]?.workshopCode || myWorkshopCode);
                       onNavigateToEntry(activeCompartment.locationTag, firstWs);
                       setActiveCompartment(null);
                     }}
-                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition-all shadow-xs"
+                    className="px-4 py-2 bg-[#006A4E] hover:bg-[#004d38] text-[#FFFDD0] font-bold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition-all shadow-xs"
                   >
                     <Wrench className="h-3.5 w-3.5" />
-                    <span>নতুন ডিফেক্ট এন্ট্রি করুন</span>
+                    <span>নতুন কাজের এন্ট্রি দিন</span>
                   </button>
                 )}
 
                 <button
                   type="button"
                   onClick={() => setActiveCompartment(null)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-all cursor-pointer"
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold text-xs rounded-xl transition-all cursor-pointer"
                 >
                   বন্ধ করুন
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

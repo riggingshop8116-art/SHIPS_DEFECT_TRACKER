@@ -10,16 +10,34 @@ import {
   Lock, 
   Ship, 
   Phone, 
-  Crosshair
+  Crosshair,
+  MapPin,
+  Radio,
+  ExternalLink,
+  PlusCircle,
+  ChevronRight,
+  Filter
 } from 'lucide-react';
 import { Defect, Workshop, AuthSession } from '../types';
+import { WARSHIP_COMPARTMENTS } from '../data/shipInspectionData';
+import { 
+  isSameShip, 
+  getShopLocationsOnShip, 
+  LocationWorkGroup,
+  isDefectForWorkshop 
+} from '../utils/shipWorkMatcher';
 
 interface WorkshopProgressAnalyticsProps {
   workshops: Workshop[];
   defects: Defect[];
+  ships?: string[];
+  selectedShip?: string;
+  onSelectShip?: (ship: string) => void;
   selectedWorkshopFilter: string;
   onSelectWorkshop: (workshopCode: string) => void;
   authSession?: AuthSession | null;
+  onFocusCompartment?: (compartmentId: string) => void;
+  onNavigateToEntry?: (prefillLocation?: string, prefillWorkshop?: string) => void;
 }
 
 // Helper to robustly match defects to a workshop
@@ -41,9 +59,14 @@ export const getWorkshopDefects = (ws: Workshop, allDefects: Defect[]) => {
 export default function WorkshopProgressAnalytics({
   workshops,
   defects,
+  ships = [],
+  selectedShip,
+  onSelectShip,
   selectedWorkshopFilter,
   onSelectWorkshop,
-  authSession
+  authSession,
+  onFocusCompartment,
+  onNavigateToEntry
 }: WorkshopProgressAnalyticsProps) {
   // Check if current user is logged in as a specific workshop user
   const isWorkshopUser = authSession?.role === 'workshop_user' && 
@@ -58,6 +81,23 @@ export default function WorkshopProgressAnalytics({
     if (selectedWorkshopFilter && selectedWorkshopFilter !== 'all') return selectedWorkshopFilter;
     return workshops[0]?.code || 'WS-01';
   });
+
+  // Active selected warship state for location and signal grouping
+  const [activeShip, setActiveShip] = useState<string>(() => {
+    return selectedShip || ships[0] || 'BNS Bangabandhu (F 25)';
+  });
+
+  // Keep active ship synced with prop
+  useEffect(() => {
+    if (selectedShip && selectedShip !== activeShip) {
+      setActiveShip(selectedShip);
+    }
+  }, [selectedShip]);
+
+  const handleShipChange = (newShip: string) => {
+    setActiveShip(newShip);
+    onSelectShip?.(newShip);
+  };
 
   // Keep active workshop synced when loggedInWorkshopCode or selectedWorkshopFilter changes
   useEffect(() => {
@@ -94,6 +134,40 @@ export default function WorkshopProgressAnalytics({
   const currentWorkshopDefects = useMemo(() => {
     return getWorkshopDefects(currentWorkshop, defects);
   }, [currentWorkshop, defects]);
+
+  // Defects belonging to the currently active workshop ON the selected ship
+  const currentWorkshopSelectedShipDefects = useMemo(() => {
+    return currentWorkshopDefects.filter(d => isSameShip(d.shipName, activeShip));
+  }, [currentWorkshopDefects, activeShip]);
+
+  // Locations on THIS selected ship where THIS workshop has work
+  const shopLocationsOnSelectedShip = useMemo(() => {
+    return getShopLocationsOnShip(activeShip, currentWorkshop, defects, WARSHIP_COMPARTMENTS);
+  }, [activeShip, currentWorkshop, defects]);
+
+  // Total active signals (pending work locations) on this ship for this workshop
+  const activeSignalsOnSelectedShip = useMemo(() => {
+    return shopLocationsOnSelectedShip.filter(loc => loc.hasActiveSignal).length;
+  }, [shopLocationsOnSelectedShip]);
+
+  // Other ships where this workshop has defects (for quick reference/switch)
+  const otherShipsWithWork = useMemo(() => {
+    const map = new Map<string, { total: number; pending: number }>();
+    currentWorkshopDefects.forEach(d => {
+      const sName = d.shipName || 'Unknown Vessel';
+      if (!isSameShip(sName, activeShip)) {
+        const existing = map.get(sName) || { total: 0, pending: 0 };
+        map.set(sName, {
+          total: existing.total + 1,
+          pending: existing.pending + (d.status === 'Pending' ? 1 : 0)
+        });
+      }
+    });
+    return Array.from(map.entries()).map(([shipName, data]) => ({
+      shipName,
+      ...data
+    })).sort((a, b) => b.pending - a.pending);
+  }, [currentWorkshopDefects, activeShip]);
 
   // Workshop-specific statistics
   const workshopStats = useMemo(() => {
@@ -202,7 +276,8 @@ export default function WorkshopProgressAnalytics({
       {/* 1. Center-Aligned Header Bar with Workshop Identity */}
       <div className="flex flex-col items-center justify-center text-center gap-3 border-b border-[#006A4E]/15 pb-5">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 flex-wrap text-center">
-          <div className="w-11 h-11 rounded-xl bg-[#006A4E] text-[#FFFDD0] font-black text-sm flex items-center justify-center shrink-0 border border-[#FFFDD0]/40 shadow-xs font-mono">
+          <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-xl bg-gradient-to-r from-[#003828] via-[#006A4E] to-[#004d38] text-[#FFFDD0] border-2 border-amber-400/80 shadow-md tracking-wider font-mono font-black text-sm sm:text-base drop-shadow-sm shrink-0">
+            <span className="text-amber-300/80 text-[10px] uppercase mr-1.5 tracking-normal font-sans font-bold">CODE:</span>
             {currentWorkshop.code}
           </div>
 
@@ -234,26 +309,58 @@ export default function WorkshopProgressAnalytics({
           </span>
         </div>
 
-        {/* Workshop Selection Dropdown (Only for Admin / HQ) */}
-        {!isWorkshopUser && (
-          <div className="flex items-center justify-center gap-2 pt-1">
-            <label htmlFor="analytics-shop-select" className="text-xs font-semibold text-slate-600">
-              ওয়ার্কশপ নির্বাচন:
+        {/* Navigation & Selection Controls Bar: Warship & Workshop Selection */}
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-2 pb-1 border-t border-[#006A4E]/10 w-full">
+          {/* Warship Selector */}
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 px-3 py-1.5 rounded-xl shadow-2xs">
+            <Ship className="h-4 w-4 text-[#006A4E]" />
+            <label htmlFor="analytics-ship-select" className="text-xs font-bold text-slate-700 whitespace-nowrap">
+              যুদ্ধজাহাজ:
             </label>
             <select
-              id="analytics-shop-select"
-              value={activeWorkshopCode}
-              onChange={(e) => handleWorkshopChange(e.target.value)}
-              className="bg-white border border-slate-300 text-slate-800 text-xs font-medium px-3 py-1.5 rounded-lg outline-none cursor-pointer hover:border-slate-400 focus:border-[#006A4E]"
+              id="analytics-ship-select"
+              value={activeShip}
+              onChange={(e) => handleShipChange(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer pr-1"
             >
-              {workshops.map(ws => (
-                <option key={ws.code} value={ws.code}>
-                  {ws.code} - {ws.nameEn}
+              {ships.map(s => (
+                <option key={s} value={s} className="bg-white text-slate-900">
+                  {s}
                 </option>
               ))}
             </select>
           </div>
-        )}
+
+          {/* Workshop Selection Dropdown (Only for Admin / HQ) */}
+          {!isWorkshopUser && (
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-300 px-3 py-1.5 rounded-xl shadow-2xs">
+              <Building2 className="h-4 w-4 text-[#006A4E]" />
+              <label htmlFor="analytics-shop-select" className="text-xs font-bold text-slate-700 whitespace-nowrap">
+                ওয়ার্কশপ:
+              </label>
+              <select
+                id="analytics-shop-select"
+                value={activeWorkshopCode}
+                onChange={(e) => handleWorkshopChange(e.target.value)}
+                className="bg-transparent text-xs font-bold text-slate-900 outline-none cursor-pointer pr-1"
+              >
+                {workshops.map(ws => (
+                  <option key={ws.code} value={ws.code} className="bg-white text-slate-900">
+                    {ws.code} - {ws.nameEn}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Live Signal Indicator Badge */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-50 to-emerald-50 border border-amber-300 text-xs font-semibold">
+            <span className={`w-2.5 h-2.5 rounded-full ${activeSignalsOnSelectedShip > 0 ? 'bg-rose-500 animate-ping' : 'bg-emerald-500'}`}></span>
+            <span className="text-slate-800">
+              সিগনাল: <strong className="text-slate-900">{activeSignalsOnSelectedShip}</strong> টি লোকেশনে বকেয়া কাজ
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* 2. Four Clean Summary Cards (Defects, In-Progress, Completed, Progress Rate) */}
@@ -317,7 +424,202 @@ export default function WorkshopProgressAnalytics({
 
       </div>
 
-      {/* 3. Visual Charts & Diagrams Container */}
+      {/* =========================================================================
+          3. DEDICATED SECTION: WORK LOCATIONS & ACTIVE SIGNALS UNDER THIS SHOP ON SELECTED SHIP
+          "এক্ষেত্রে যে শপের জাহাজের যে লোকেশনে কাজ সেই লোকেশন সেই শপের আন্ডারে শো হবে"
+      ========================================================================= */}
+      <div className="bg-white rounded-2xl border-2 border-[#006A4E]/30 p-5 sm:p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#006A4E]/15 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-r from-[#003828] via-[#006A4E] to-[#004d38] text-[#FFFDD0] shadow-xs shrink-0">
+              <Radio className="h-5 w-5 text-[#FFFDD0] animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2 flex-wrap">
+                <span className="text-[#006A4E] font-black">{activeShip}</span>
+                <span className="text-slate-400 font-normal">•</span>
+                <span className="text-slate-900 font-extrabold">{currentWorkshop.nameEn} ({currentWorkshop.code})</span>
+                <span className="text-slate-600 font-medium text-xs sm:text-sm">এর কাজের লোকেশন ও সক্রিয় সিগনাল</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                নির্বাচিত জাহাজের যে যে লোকেশনে এই শপের কাজ রয়েছে, সেই লোকেশন ও ডিফেক্ট সিগনাল এখানে প্রদর্শিত হচ্ছে:
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-2 ${
+              activeSignalsOnSelectedShip > 0
+                ? 'bg-rose-50 border-rose-300 text-rose-800'
+                : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+            }`}>
+              <span className={`w-2.5 h-2.5 rounded-full ${activeSignalsOnSelectedShip > 0 ? 'bg-rose-500 animate-ping' : 'bg-emerald-500'}`}></span>
+              <span>
+                {activeSignalsOnSelectedShip > 0 ? `${activeSignalsOnSelectedShip}টি লোকেশনে সক্রিয় সিগনাল` : 'সকল কাজ সচল'}
+              </span>
+            </span>
+          </div>
+        </div>
+
+        {/* Location Cards Grid */}
+        {shopLocationsOnSelectedShip.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+            {shopLocationsOnSelectedShip.map((locGroup) => {
+              return (
+                <div 
+                  key={locGroup.location}
+                  className={`rounded-xl border p-4 transition-all space-y-3.5 relative overflow-hidden ${
+                    locGroup.hasActiveSignal
+                      ? 'bg-rose-50/40 border-rose-300 ring-1 ring-rose-200/80 shadow-xs'
+                      : 'bg-slate-50/70 border-slate-200 hover:border-slate-300 shadow-2xs'
+                  }`}
+                >
+                  {/* Subtle top indicator bar */}
+                  <div className={`absolute top-0 left-0 right-0 h-1 ${locGroup.hasActiveSignal ? 'bg-rose-500' : 'bg-emerald-500'}`}></div>
+
+                  {/* Card Header: Location Name & Matched Compartment */}
+                  <div className="flex items-start justify-between gap-2 border-b border-slate-200/80 pb-2.5 pt-0.5">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className={`h-4 w-4 shrink-0 ${locGroup.hasActiveSignal ? 'text-rose-600' : 'text-[#006A4E]'}`} />
+                        <h4 className="text-sm font-bold text-slate-900 truncate">
+                          {locGroup.location}
+                        </h4>
+                      </div>
+                      <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
+                        {locGroup.compartmentNameEn}
+                      </p>
+                    </div>
+
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-slate-900 text-white font-mono font-bold text-[10px] shrink-0 shadow-2xs">
+                      {locGroup.compartmentCode}
+                    </span>
+                  </div>
+
+                  {/* Signal & Status Badge */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      {locGroup.hasActiveSignal ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-100 text-rose-800 font-bold text-xs border border-rose-200">
+                          <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>
+                          সক্রিয় সিগনাল ({locGroup.pendingCount} বকেয়া)
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          সম্পন্ন ({locGroup.solvedCount})
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      মোট কাজ: {locGroup.defects.length} টি
+                    </span>
+                  </div>
+
+                  {/* Tasks / Defects List Under This Location */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">
+                      কাজের বিবরণ (Tasks Log):
+                    </span>
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                      {locGroup.defects.map((def) => (
+                        <div 
+                          key={def.id} 
+                          className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs space-y-1 shadow-2xs"
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              def.status === 'Pending' 
+                                ? 'bg-amber-100 text-amber-800 border border-amber-200' 
+                                : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            }`}>
+                              {def.status === 'Pending' ? 'চলমান' : 'সমাধানকৃত'}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {def.defectDate}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-800 font-medium leading-snug">
+                            {def.defectDescription || `${locGroup.location}-এ নির্ধারিত রক্ষণাবেক্ষণ কাজ`}
+                          </p>
+                          {def.status === 'Solved' && def.solutionDescription && (
+                            <p className="text-[11px] text-emerald-700 bg-emerald-50/80 p-1.5 rounded font-medium border border-emerald-200/50 mt-1">
+                              ✓ {def.solutionDescription}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Action: Spotlight on 3D Warship */}
+                  <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => onFocusCompartment?.(locGroup.compartmentId)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#006A4E] hover:text-[#004d38] cursor-pointer transition-colors"
+                    >
+                      <Crosshair className="h-3.5 w-3.5 text-[#006A4E]" />
+                      <span>৩ডি জাহাজে এই লোকেশন দেখুন</span>
+                    </button>
+                    <span className="text-[10px] text-slate-400 font-mono font-bold">
+                      {locGroup.compartmentCode}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Empty State for this shop on this ship */
+          <div className="py-7 px-4 bg-slate-50/80 rounded-xl border border-dashed border-slate-300 text-center space-y-3">
+            <div className="w-11 h-11 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-2xs">
+              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-800">
+                "{activeShip}" জাহাজে {currentWorkshop.nameEn}-এর কোনো বকেয়া কাজ বা ডিফেক্ট নেই
+              </h4>
+              <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
+                বর্তমানে এই যুদ্ধজাহাজের কোনো লোকেশনে এই শপের জন্য ডিফেক্ট সিগনাল নেই। সকল সিস্টেম সচল রয়েছে।
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 flex-wrap pt-1">
+              <button
+                type="button"
+                onClick={() => onNavigateToEntry?.(undefined, currentWorkshop.nameEn)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#006A4E] hover:bg-[#004d38] text-[#FFFDD0] rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+              >
+                <PlusCircle className="h-4 w-4" />
+                <span>এই জাহাজের জন্য নতুন কাজের এন্ট্রি দিন</span>
+              </button>
+
+              {otherShipsWithWork.length > 0 && (
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <span className="text-slate-400">•</span>
+                  <span className="font-semibold">অন্যান্য জাহাজ যেখানে কাজ আছে:</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {otherShipsWithWork.slice(0, 3).map(os => (
+                      <button
+                        key={os.shipName}
+                        type="button"
+                        onClick={() => handleShipChange(os.shipName)}
+                        className="px-2.5 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold text-xs cursor-pointer transition-colors shadow-2xs"
+                      >
+                        {os.shipName.split('(')[0].trim()} ({os.total}টি)
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 4. Visual Charts & Diagrams Container */}
       <div className="bg-slate-50/60 border-2 border-[#006A4E]/20 rounded-xl p-4 sm:p-5 space-y-4">
         
         {/* Diagram Switcher Tabs */}

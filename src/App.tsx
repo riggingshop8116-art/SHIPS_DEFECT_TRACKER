@@ -58,7 +58,7 @@ export default function App() {
   // Navigation active tab: 'dashboard' | 'entry' | 'find' | 'organization' | 'admin'
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
 
-  // Active Admin SubTab: 'workshops' | 'fleet' | 'locations' | 'production' | 'profile' | 'backup' | 'settings'
+  // Active Admin SubTab: 'workshops' | 'fleet' | 'locations' | 'production' | 'profile' | 'settings' | 'users'
   const [adminSubTab, setAdminSubTab] = useState<AdminSubTab>('workshops');
 
   // Mobile Navigation Drawer Toggle State
@@ -136,14 +136,7 @@ export default function App() {
   });
 
   const [defects, setDefects] = useState<Defect[]>(() => {
-    try {
-      const stored = localStorage.getItem('defect_tracker_defects');
-      if (stored) return JSON.parse(stored);
-    } catch (e) {
-      console.error(e);
-    }
-    // Seed initial realistic defects
-    return [
+    const defaultSeedDefects: Defect[] = [
       {
         id: 'def-1788795483513',
         shipName: 'BNS Bangabandhu (F 25)',
@@ -175,11 +168,86 @@ export default function App() {
         createdAt: '2026-09-08T00:00:00.000Z'
       },
       {
+        id: 'def-paint-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Hull, Keel & Underwater Hull',
+        workshop: 'Painting & Preservation Shop',
+        workshopCode: 'WS-10',
+        defectDescription: 'আন্ডারওয়াটার হাল ও ওয়াটারলাইন সংলগ্ন এরিয়ায় অ্যান্টি-ফাউলিং কোটিং ক্ষয়প্রাপ্ত। স্ক্র্যাপ গ্রিট ব্লাস্টিং ও নতুন ইপোক্সি কোটিং এবং জিংক অ্যানোড সংরক্ষণ কার্যক্রম।',
+        defectDate: '2026-09-02',
+        status: 'Pending',
+        defectImage: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&auto=format&fit=crop&q=60',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-02T00:00:00.000Z'
+      },
+      {
+        id: 'def-paint-02',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Flight Deck & Quarter Deck',
+        workshop: 'Painting & Preservation Shop',
+        workshopCode: 'WS-10',
+        defectDescription: 'ফ্লাইট ডেক নন-স্কিড কোটিং ওয়াশআউট ও টেকনিক্যাল হেলো ল্যান্ডিং মার্কিং রি-পেইন্টিং এবং প্রিভেন্টিভ কোটিং সংরক্ষণ কার্যক্রম চলমান।',
+        defectDate: '2026-09-05',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-05T00:00:00.000Z'
+      },
+      {
+        id: 'def-paint-03',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Bow & Anchor Windlass Station',
+        workshop: 'Painting & Preservation Shop',
+        workshopCode: 'WS-10',
+        defectDescription: 'ফোরক্যাসল ডেক ও হস পাইপ সংলগ্ন স্টিল প্লেটে অ্যান্টি-করোসিভ প্রাইমার ও ফিনিশিং মেরিন গ্রেড পেইন্টিং সম্পন্ন।',
+        defectDate: '2026-08-28',
+        solutionDate: '2026-09-01',
+        solutionDescription: 'বিএসআই ও নেভাল স্ট্যান্ডার্ড অনুযায়ী জিংক প্রাইমার ও টু-প্যাক ইপোক্সি ফিনিশ কোট প্রয়োগ সফলভাবে সম্পন্ন হয়েছে।',
+        defectImage: '',
+        solutionImage: '',
+        status: 'Solved',
+        createdAt: '2026-08-28T00:00:00.000Z'
+      },
+      {
+        id: 'def-hull-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Hull, Keel & Underwater Hull',
+        workshop: 'Hull & Structural Shop',
+        workshopCode: 'WS-03',
+        defectDescription: 'হাল প্লেট ফ্রেম ৩২ সংলগ্ন স্থানে সামান্য ক্ষয় ও আল্ট্রাসনিক থিকনেস গজ (UTG) রিডিং পর্যবেক্ষণ কার্যক্রম।',
+        defectDate: '2026-09-03',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-03T00:00:00.000Z'
+      },
+      {
+        id: 'def-weld-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Bow & Anchor Windlass Station',
+        workshop: 'Welding & Fabrication Shop',
+        workshopCode: 'WS-04',
+        defectDescription: 'চেইন লকার ওয়াটারটাইট বাল্কহেড ও হস পাইপ মেটাল ডাবলার ওয়েল্ডিং কার্যক্রম সম্পন্ন।',
+        defectDate: '2026-09-01',
+        solutionDate: '2026-09-04',
+        solutionDescription: 'ডাবল পাস ওয়েল্ডিং ও ডাই পেনিট্রান্ট টেস্ট (DPT) দ্বারা ত্রুটিহীনতা নিশ্চিত করা হয়েছে।',
+        defectImage: '',
+        solutionImage: '',
+        status: 'Solved',
+        createdAt: '2026-09-01T00:00:00.000Z'
+      },
+      {
         id: 'def-sample-1',
-        shipName: 'BNS Bangabandhu (এফ ২৫)',
+        shipName: 'BNS Bangabandhu (F 25)',
         location: 'Main Engine',
-        workshop: 'Rigging Shop',
-        workshopCode: 'WS-01',
+        workshop: 'IC Engine & Diesel Shop',
+        workshopCode: 'WS-08',
         defectImage: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&auto=format&fit=crop&q=60',
         defectDate: '2026-07-14',
         defectDescription: 'মেইন ইঞ্জিনের ৪ নম্বর সিলিন্ডারের ফুয়েল ইনজেক্টর প্রেসার অসম এবং মাত্রাতিরিক্ত ভাইব্রেশন দেখা গেছে।',
@@ -191,7 +259,7 @@ export default function App() {
       },
       {
         id: 'def-sample-2',
-        shipName: 'BNS Somudra Joy (এফ ২৮)',
+        shipName: 'BNS Somudra Joy (F 28)',
         location: 'Diesel Generator 1 (DG-1)',
         workshop: 'Electrical Power Workshop',
         workshopCode: 'WS-05',
@@ -206,7 +274,7 @@ export default function App() {
       },
       {
         id: 'def-1784491764227',
-        shipName: 'BNS Ali Haider (এফ ১৭)',
+        shipName: 'BNS Ali Haider (F 17)',
         location: 'Diesel Generator 1 (DG-1)',
         workshop: 'Electrical Power Workshop',
         workshopCode: 'WS-05',
@@ -221,7 +289,7 @@ export default function App() {
       },
       {
         id: 'def-1784490656515',
-        shipName: 'BNS Bangabandhu (এফ ২৫)',
+        shipName: 'BNS Bangabandhu (F 25)',
         location: 'Main Engine',
         workshop: 'Machine Shop',
         workshopCode: 'WS-02',
@@ -233,8 +301,342 @@ export default function App() {
         solutionImage: '',
         status: 'Solved',
         createdAt: '2026-07-19T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws02-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Forecastle & 76mm Naval Gun',
+        workshop: 'Machine Shop',
+        workshopCode: 'WS-02',
+        defectDate: '2026-09-06',
+        defectDescription: '৭৬মিমি প্রধান নেভাল গান মাউন্টের ট্রানিয়ন পিন ও এলিভেশন সেক্টর গিয়ার টিথ প্রিসিশন লেদ টার্নিং ও ফেসিং কার্যক্রম চলমান।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-06T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws06-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Radar Mast',
+        workshop: 'Electronics & Radar Shop',
+        workshopCode: 'WS-06',
+        defectDate: '2026-09-04',
+        defectDescription: '৩ডি লং-রেঞ্জ সার্ভেইল্যান্স রাডার অ্যান্টেনা ওয়েভগাইড আরএফ সিগন্যাল লস টেস্ট ও পিআরএফ ক্যালিব্রেশন।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-04T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws07-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Forecastle & 76mm Naval Gun',
+        workshop: 'Weapon & Ordnance Shop',
+        workshopCode: 'WS-07',
+        defectDate: '2026-09-03',
+        defectDescription: '৭৬মিমি প্রধান নেভাল গান মাউন্ট রিকয়েল সিলিন্ডার হাইড্রোলিক সিল প্রেসার চেক ও টেস্ট ফায়ারিং প্রস্তুতি।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-03T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws09-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'AC Chiller & Fresh Water Plant',
+        workshop: 'Pipe Fitting & Plumbing Shop',
+        workshopCode: 'WS-09',
+        defectDate: '2026-09-02',
+        defectDescription: 'আরও ওয়াটার ডিস্যালিনেশন প্ল্যান্ট হাই-প্রেসার ব্রাইন ফ্ল্যাঞ্জ ও ভালভ গ্যাসকেট লিকেজ মেরামত সম্পন্ন।',
+        solutionDate: '2026-09-06',
+        solutionDescription: 'নতুন হাই-টেনসাইল গ্যাসকেট প্রতিস্থাপন ও ১৮০ বার প্রেসার টেস্ট সফল।',
+        defectImage: '',
+        solutionImage: '',
+        status: 'Solved',
+        createdAt: '2026-09-02T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws11-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Diesel Generator 1 (DG-1)',
+        workshop: 'Boiler & Steam Shop',
+        workshopCode: 'WS-11',
+        defectDate: '2026-09-05',
+        defectDescription: 'অক্সিলারি স্টিম বয়লার সেফটি রিলিজ ভালভ হাইড্রোলিক পপিং প্রেসার টেস্ট ও বার্নার জেট ক্লিনিং।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-05T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws12-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Main Engine',
+        workshop: 'Gas Turbine & Propulsion Shop',
+        workshopCode: 'WS-12',
+        defectDate: '2026-09-04',
+        defectDescription: 'মেইন প্রপালশন গ্যাস টারবাইন ব্লেডস বোরোস্কোপ পরিদর্শন ও রিডাকশন গিয়ারবক্স কাপলিং চেক।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-04T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws13-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Flight Deck & Quarter Deck',
+        workshop: 'Sail Loft & Survival Equipment Shop',
+        workshopCode: 'WS-13',
+        defectDate: '2026-09-01',
+        defectDescription: 'ফ্লাইট ডেক এভিয়েশন ক্র্যাশ রেসকিউ ফায়ার স্যুট ও লাইফ র‍্যাফট হাইড্রোস্ট্যাটিক রিলিজ ইউনিট সার্ভিসিং সম্পন্ন।',
+        solutionDate: '2026-09-05',
+        solutionDescription: 'সার্টিফিকেশন নবায়ন করা হয়েছে ও নতুন এইচআরইউ ইউনিট ফিট করা হয়েছে।',
+        defectImage: '',
+        solutionImage: '',
+        status: 'Solved',
+        createdAt: '2026-09-01T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws14-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Steering Gear & Propellers',
+        workshop: 'Foundry & Metal Casting Shop',
+        workshopCode: 'WS-14',
+        defectDate: '2026-09-06',
+        defectDescription: 'স্টার্ন টিউব ব্রোঞ্জ গ্ল্যান্ড রিং ও প্রপেলার ব্লেড ক্যাভিটেশন কাস্টিং পরিদর্শন কার্যক্রম।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-06T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws15-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Hull, Keel & Underwater Hull',
+        workshop: 'Shipwright & Carpentry Shop',
+        workshopCode: 'WS-15',
+        defectDate: '2026-09-03',
+        defectDescription: 'ড্রাইডক কিল ব্লক টিম্বার পজিশনিং ও আন্ডারওয়াটার ডকিং প্লাগ লিক চেকিং সম্পন্ন।',
+        solutionDate: '2026-09-07',
+        solutionDescription: 'ডকিং ব্লক স্ট্রেইটনেস অ্যালাইনমেন্ট অনুমোদিত ড্রয়িং অনুযায়ী নিশ্চিত করা হয়েছে।',
+        defectImage: '',
+        solutionImage: '',
+        status: 'Solved',
+        createdAt: '2026-09-03T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws16-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Main Engine',
+        workshop: 'Tool Room & Precision Shop',
+        workshopCode: 'WS-16',
+        defectDate: '2026-09-05',
+        defectDescription: 'ইঞ্জিন সিলিন্ডার হেড স্পেশালাইজড হাইড্রোলিক টর্ক রেঞ্চ ও প্রিসিশন ডায়ালগেজ ক্যালিব্রেশন।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-05T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws17-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Forecastle & 76mm Naval Gun',
+        workshop: 'Optical & Fire Control Shop',
+        workshopCode: 'WS-17',
+        defectDate: '2026-09-04',
+        defectDescription: 'ইলেক্ট্রো-অপটিক্যাল গান ডিরেক্টর অপটিক্স প্রিজম ও লেজার রেঞ্জফাইন্ডার অ্যালাইনমেন্ট টেস্ট।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-04T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws18-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'AC Chiller & Fresh Water Plant',
+        workshop: 'Refrigeration & HVAC Shop',
+        workshopCode: 'WS-18',
+        defectDate: '2026-09-05',
+        defectDescription: 'সেন্ট্রাল এসি চিলার কম্প্রেসার সিলিন্ডার হেড সার্ভিসিং ও ফ্রেয়ন গ্যাস লিক পর্যবেক্ষণ।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-05T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws19-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Steering Gear & Propellers',
+        workshop: 'Hydraulic & Pneumatic Shop',
+        workshopCode: 'WS-19',
+        defectDate: '2026-09-06',
+        defectDescription: 'ইলেক্ট্রো-হাইড্রোলিক স্টিয়ারিং গিয়ার রাম সিলিং কিট রিপ্লেসমেন্ট ও হাইড্রো প্রেসার টেস্ট।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-06T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws20-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Hull, Keel & Underwater Hull',
+        workshop: 'Electroplating & Galvanizing Shop',
+        workshopCode: 'WS-20',
+        defectDate: '2026-09-02',
+        defectDescription: 'আন্ডারওয়াটার স্যাক্রিফিশিয়াল জিংক অ্যানোড ব্লক ইনস্টলেশন ও আইসিসিপি রেফারেন্স ইলেক্ট্রোড চেক সম্পন্ন।',
+        solutionDate: '2026-09-06',
+        solutionDescription: '১২০টি উচ্চ বিশুদ্ধতার জিংক অ্যানোড ব্লক সফলভাবে রিপ্লেস করা হয়েছে।',
+        defectImage: '',
+        solutionImage: '',
+        status: 'Solved',
+        createdAt: '2026-09-02T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws21-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Diesel Generator 1 (DG-1)',
+        workshop: 'Battery & Power Storage Shop',
+        workshopCode: 'WS-21',
+        defectDate: '2026-09-04',
+        defectDescription: 'ডিজি স্টার্টিং ২৪ ভোল্ট হেভি-ডিউটি ব্যাটারি ব্যাংক ক্যাপাসিটি ডিসচার্জ লোড টেস্ট সম্পাদন।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-04T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws22-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Hull, Keel & Underwater Hull',
+        workshop: 'Underwater Repairs & Diving Unit',
+        workshopCode: 'WS-22',
+        defectDate: '2026-09-05',
+        defectDescription: 'নৌবাহিনীর ডাইভার টিম দ্বারা তলদেশ সি-চেস্ট গ্রিড ক্লিয়ারিং ও আন্ডারওয়াটার সিসিটিভি ভিডিও ইন্সপেকশন।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-05T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws23-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Bridge & Wheelhouse',
+        workshop: 'Telecommunication & Nav-Aids Shop',
+        workshopCode: 'WS-23',
+        defectDate: '2026-09-05',
+        defectDescription: 'ব্রিজ ট্যাকটিক্যাল ভিএইচএফ/ইউএইচএফ নৌ-রেডিও ট্রান্সসিভার পাওয়ার টেস্ট ও অ্যান্টেনা ভিএসডব্লিউআর টিউনিং।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-05T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws24-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Main Engine',
+        workshop: 'Calibration & Instrumentation Lab',
+        workshopCode: 'WS-24',
+        defectDate: '2026-09-03',
+        defectDescription: 'মেইন ইঞ্জিন এক্সহস্ট পাইরোমিটার সেন্সর ও ডিজিটাল প্রেসার ট্র্যান্সমিটার প্রিসিশন ক্যালিব্রেশন সম্পন্ন।',
+        solutionDate: '2026-09-06',
+        solutionDescription: 'ল্যাব স্ট্যান্ডার্ড অনুসারে ক্যালিব্রেশন সার্টিফিকেট প্রদান করা হয়েছে।',
+        defectImage: '',
+        solutionImage: '',
+        status: 'Solved',
+        createdAt: '2026-09-03T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws25-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Hull, Keel & Underwater Hull',
+        workshop: 'Quality Control & NDT Lab',
+        workshopCode: 'WS-25',
+        defectDate: '2026-09-04',
+        defectDescription: 'হাল প্লেট ফ্রেম ৪০ থেকে ৬০ পর্যন্ত আল্ট্রাসনিক থিকনেস গজ (UTG) রিডিং ও ওয়েল্ডিং সীমে এনডিটি পরীক্ষা।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-04T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws26-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Steering Gear & Propellers',
+        workshop: 'Propeller & Shaft Alignment Shop',
+        workshopCode: 'WS-26',
+        defectDate: '2026-09-05',
+        defectDescription: 'টেইলশ্যাফট স্টার্ন টিউব কাটলেস বিয়ারিং ক্লিয়ারেন্স মেজারমেন্ট ও অপটিক্যাল অ্যালাইনমেন্ট টেস্ট।',
+        status: 'Pending',
+        defectImage: '',
+        solutionDate: '',
+        solutionImage: '',
+        solutionDescription: '',
+        createdAt: '2026-09-05T00:00:00.000Z'
+      },
+      {
+        id: 'def-ws27-01',
+        shipName: 'BNS Bangabandhu (F 25)',
+        location: 'Bow & Anchor Windlass Station',
+        workshop: 'Yard Services & Heavy Transport',
+        workshopCode: 'WS-27',
+        defectDate: '2026-09-02',
+        defectDescription: 'ডকইয়ার্ড হেভি ক্রেন লিফটিং দ্বারা নোঙর চেইন স্থানান্তর ও মুরিং সাপোর্ট কার্যক্রম সম্পন্ন।',
+        solutionDate: '2026-09-06',
+        solutionDescription: 'নিরাপদ লিফটিং ও ডক জেটি বার্থিং ক্লিয়ারেন্স নিশ্চিত করা হয়েছে।',
+        defectImage: '',
+        solutionImage: '',
+        status: 'Solved',
+        createdAt: '2026-09-02T00:00:00.000Z'
       }
     ];
+
+    try {
+      const stored = localStorage.getItem('defect_tracker_defects');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const existingIds = new Set(parsed.map((d: Defect) => d.id));
+          const missingSeeds = defaultSeedDefects.filter(d => !existingIds.has(d.id));
+          if (missingSeeds.length > 0) {
+            return [...parsed, ...missingSeeds];
+          }
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    // Seed initial realistic defects
+    return defaultSeedDefects;
   });
 
   const [riggingShopName, setRiggingShopName] = useState<string>(() => {
@@ -540,6 +942,20 @@ export default function App() {
   const handleUpdateRiggingShopName = (name: string) => {
     setRiggingShopName(name);
     localStorage.setItem('defect_tracker_shop_name', name);
+    // Also synchronize WS-01 workshop object so 3D viewer, dropdowns and charts reflect renamed workshop
+    const updated = workshops.map(ws => {
+      if (ws.code === 'WS-01' || ws.id === 'ws-01') {
+        return {
+          ...ws,
+          nameEn: name,
+          nameBn: name
+        };
+      }
+      return ws;
+    });
+    setWorkshops(updated);
+    localStorage.setItem('defect_tracker_workshops', JSON.stringify(updated));
+    supabaseService.syncAllWorkshops(updated);
   };
 
   // Defect operations with dual persistence (local + Supabase)
@@ -730,8 +1146,6 @@ export default function App() {
           return 'Production Department & Work Order System';
         case 'profile':
           return 'Admin Officer Profile';
-        case 'backup':
-          return 'Data Backup & Restore';
         default:
           return 'Admin Control Panel';
       }
@@ -1081,6 +1495,8 @@ export default function App() {
                   onResetApp={handleResetApp}
                   riggingShopName={riggingShopName}
                   onUpdateRiggingShopName={handleUpdateRiggingShopName}
+                  productionUnits={productionUnits}
+                  onUpdateProductionUnits={handleUpdateProductionUnits}
                   initialSubTab={adminSubTab}
                   onSubTabChange={(sub) => setAdminSubTab(sub)}
                   bgIntensity={bgIntensity}

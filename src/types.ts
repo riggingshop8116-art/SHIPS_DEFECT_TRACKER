@@ -43,7 +43,7 @@ export interface DockyardConfig {
   taglineBn?: string;
 }
 
-export type AdminSubTab = 'workshops' | 'fleet' | 'locations' | 'settings' | 'users' | 'production' | 'site_info' | 'profile' | 'backup';
+export type AdminSubTab = 'workshops' | 'fleet' | 'locations' | 'settings' | 'users' | 'production' | 'site_info' | 'profile';
 
 export interface AuthSession {
   isLoggedIn: boolean;

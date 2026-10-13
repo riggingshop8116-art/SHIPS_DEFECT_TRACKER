@@ -1,6 +1,7 @@
 export interface ShipSectionTask {
   workshopCode: string;
   workshopNameBn: string;
+  workshopNameEn?: string;
   category: string;
   oicRankAndName: string;
   phoneExt: string;
@@ -13,7 +14,7 @@ export interface ShipCompartment {
   nameBn: string;
   nameEn: string;
   deckLevel: string;
-  locationTag: string; // Matches locations in system: 'মেইন ইঞ্জিন', 'ডিজি-১', etc.
+  locationTag: string; // Matches locations in system
   posX: number; // percentage 0 - 100 for 3D/Profile placement
   posY: number; // percentage 0 - 100 for 3D/Profile placement
   isoX: number; // percentage in isometric view
@@ -26,20 +27,23 @@ export interface ShipCompartment {
 }
 
 export const WARSHIP_COMPARTMENTS: ShipCompartment[] = [
+  // =========================================================================
+  // SEC-01: Bow & Anchor Windlass Station
+  // =========================================================================
   {
     id: 'sec-01',
     code: 'SEC-01',
     nameBn: 'বো ও অ্যাঙ্কর উইন্ডলাস স্টেশন',
     nameEn: 'Bow & Anchor Windlass Station',
     deckLevel: 'ফোরক্যাসল ডেক (Deck 1 Fore)',
-    locationTag: 'বো ও উইন্ডলাস (Bow & Windlass)',
+    locationTag: 'Bow & Anchor Windlass Station',
     posX: 92,
     posY: 46,
     isoX: 88,
     isoY: 52,
     topX: 92,
     topY: 50,
-    overview: 'জাহাজের সম্মুখভাগ, নোঙর ড্রপিং ও হাউলিং উইন্ডলাস মোটর, ব্রেক ব্যান্ড অ্যাসেম্বলি, চেইন লকার ও মুরিং ক্যাপস্টান ড্রাইভ।',
+    overview: 'জাহাজের সম্মুখভাগ, নোঙর ড্রপিং ও হাউলিং উইন্ডলাস মোটর, ব্রেক ব্যান্ড অ্যাসেম্বলি, চেইন লকার ও মুরিং ক্যাপস্টান ড্রাইভ। ডকইয়ার্ড রিগিং, ওয়েল্ডিং, পেইন্টিং ও হাইড্রোলিক টিম যৌথভাবে এই জোনে কাজ সম্পাদন করে।',
     specifications: [
       { label: 'উইন্ডলাস রেটিং', value: 'হাইড্রোলিক/ইলেকট্রিক ৩৫০ কিলোওয়াট' },
       { label: 'অ্যাঙ্কর ক্যাবল টাইপ', value: 'স্টাড লিংক ৪২মিমি হাই-টেনসাইল স্টিল' },
@@ -49,9 +53,10 @@ export const WARSHIP_COMPARTMENTS: ShipCompartment[] = [
       {
         workshopCode: 'WS-01',
         workshopNameBn: 'রিগিং শপ (Rigging Shop)',
-        category: 'ডেক ও লিফটিং গিয়ার',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এস কে মাহমুদ',
-        phoneExt: '৪২০১',
+        workshopNameEn: 'Rigging Shop',
+        category: 'Deck & Lifting Gear',
+        oicRankAndName: 'SAKIB HOSEN (OFFICE WRITER)',
+        phoneExt: '8116',
         tasks: [
           'অ্যাঙ্কর চেইন লিংক ও গ্যাটার পরিদর্শন এবং প্রুফ লোড টেনসাইল টেস্ট সম্পাদন।',
           'উইন্ডলাস ব্রেক ব্যান্ড লিনিং ও ফ্রিকশন প্যাড মেজারমেন্ট ও ওভারহোল।',
@@ -60,783 +65,1026 @@ export const WARSHIP_COMPARTMENTS: ShipCompartment[] = [
         ]
       },
       {
-        workshopCode: 'WS-02',
-        workshopNameBn: 'মেশিন শপ (Machine Shop)',
-        category: 'মেকানিক্যাল প্রিসিশন',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এম জামান',
-        phoneExt: '৪২০২',
-        tasks: [
-          'উইন্ডলাস ড্রাইভ গিয়ারবক্স বেয়ারিং রি-মেটালিং ও স্পিন্ডেল শ্যাফটিং টার্নিং।',
-          'ক্যাপস্টান ড্রাম শ্যাফট কি-ওয়ে রি-গ্রুভিং ও বুশিং প্রিসিশন ফিটিং।'
-        ]
-      },
-      {
-        workshopCode: 'WS-05',
-        workshopNameBn: 'ইলেকট্রিক্যাল পাওয়ার শপ',
-        category: 'ইলেকট্রিক্যাল',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার টি এ ইসলাম',
-        phoneExt: '৪২০৫',
-        tasks: [
-          'উইন্ডলাস মোটর স্টেটর ওয়াইন্ডিং ইনসুলেশন মেগার টেস্ট (>১০ MΩ)।',
-          'মেইন কন্টাক্টর রিভার্সিং প্যানেল সার্ভিসিং ও সেফটি ট্রিপ লিমিট সুইচ ক্যালিব্রেশন।'
-        ]
-      },
-      {
         workshopCode: 'WS-04',
-        workshopNameBn: 'ওয়েল্ডিং ও ফেব্রিকেশন শপ',
-        category: 'মেটাল জয়েনিং',
-        oicRankAndName: 'লেফটেন্যান্ট কে আর হাসান',
-        phoneExt: '৪২০৪',
+        workshopNameBn: 'ওয়েল্ডিং ও ফেব্রিকেশন শপ (Welding & Fabrication Shop)',
+        workshopNameEn: 'Welding & Fabrication Shop',
+        category: 'Metal Joining',
+        oicRankAndName: 'Lieutenant K R Hasan',
+        phoneExt: '4204',
         tasks: [
-          'চেইন লকার ওয়াটারটাইট বাBulkhead ও হস পাইপ মেটাল ক্ষয়রোধে রি-প্লেটিং ও ডাবলার ওয়েল্ডিং।'
+          'চেইন লকার ওয়াটারটাইট বাল্কহেড ও হস পাইপ মেটাল ক্ষয়রোধে ডাবলার প্লেট ওয়েল্ডিং।',
+          'বুলওয়ার্ক স্টিফেনার ও রোপ বিট ফাউন্ডেশন স্ট্রাকচারাল রি-ওয়েল্ডিং।'
+        ]
+      },
+      {
+        workshopCode: 'WS-10',
+        workshopNameBn: 'পেইন্টিং ও প্রিজারভেশন শপ (Painting & Preservation Shop)',
+        workshopNameEn: 'Painting & Preservation Shop',
+        category: 'Coating & Protection',
+        oicRankAndName: 'Lieutenant R Ahmed',
+        phoneExt: '4210',
+        tasks: [
+          'ফোরক্যাসল ডেক ও হস পাইপ সারফেস গ্রিট ব্লাস্টিং (SA 2.5) এবং জিংক সিলিকেট প্রাইমার প্রয়োগ।',
+          'চেইন লকার ইন্টারনাল ওয়াটার-রেজিস্ট্যান্ট কোল টার ইপোক্সি কোটিং এবং রি-পেইন্টিং।'
         ]
       },
       {
         workshopCode: 'WS-19',
-        workshopNameBn: 'হাইড্রোলিক ও নিউমেটিক শপ (Hydraulics & Pneumatics)',
-        category: 'ফ্লুইড পাওয়ার',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এইচ হাসান',
-        phoneExt: '৪২১১',
+        workshopNameBn: 'হাইড্রোলিক ও নিউমেটিক শপ (Hydraulic & Pneumatic Shop)',
+        workshopNameEn: 'Hydraulic & Pneumatic Shop',
+        category: 'Fluid Power',
+        oicRankAndName: 'Lt Commander H Hasan',
+        phoneExt: '4219',
         tasks: [
-          'উইন্ডলাস হাই-প্রেসার হাইড্রোলিক পাম্প প্রেসার টেস্ট ও কন্ট্রোল ভালভ ক্যালিব্রেশন।',
-          'অ্যাঙ্কর উইঞ্চ হাইড্রোলিক পাইপিং লিকেজ ও অ্যাকুমুলেটর প্রেশার চার্জিং।'
+          'উইন্ডলাস হাইড্রোলিক ড্রাইভ মোটর সিলিং কিট প্রতিস্থাপন ও প্রেসার টেস্ট (২১০ বার)।',
+          'মুরিং ক্যাপস্টান হাইড্রোলিক পাইপলাইন প্রেসার গেজ ক্যালিব্রেশন ও ফ্লুইড ফিল্টারিং।'
         ]
       },
       {
         workshopCode: 'WS-27',
-        workshopNameBn: 'ইয়ার্ড সার্ভিসেস ও হেভি ট্রান্সপোর্ট',
-        category: 'ইয়ার্ড লজিস্টিকস',
-        oicRankAndName: 'লেফটেন্যান্ট আর ইউ আহমেদ',
-        phoneExt: '৪২২৭',
+        workshopNameBn: 'ইয়ার্ড সার্ভিসেস ও হেভি ট্রান্সপোর্ট (Yard Services & Heavy Transport)',
+        workshopNameEn: 'Yard Services & Heavy Transport',
+        category: 'Yard Logistics',
+        oicRankAndName: 'Lieutenant R U Ahmed',
+        phoneExt: '4227',
         tasks: [
-          'বো বার্থিং ও মুরিং পয়েন্ট হেভি টোয়িং গিয়ার সাপোর্ট এবং জেটি ক্রেন লোডিং।'
+          'হেভি মুরিং লাইন সাপোর্ট ও টাগবোট বার্থিং সেফটি মনিটরিং।',
+          'জেটি ক্রেন দ্বারা হেভি অ্যাঙ্কর চেইন উত্তোলন ও ডকইয়ার্ডে স্থানান্তর।'
         ]
       }
     ]
   },
+
+  // =========================================================================
+  // SEC-02: Forecastle & 76mm Main Naval Gun Mount
+  // =========================================================================
   {
     id: 'sec-02',
     code: 'SEC-02',
     nameBn: 'ফোরক্যাসল ও প্রধান নেভাল গান (৭৬মিমি)',
     nameEn: 'Forecastle & 76mm Main Naval Gun Mount',
-    deckLevel: 'ফোরক্যাসল ডেক (Mount 01)',
-    locationTag: 'প্রধান নেভাল গান (76mm Gun)',
+    deckLevel: 'গান ডেক (Gun Deck Fore)',
+    locationTag: 'Forecastle & 76mm Naval Gun',
     posX: 81,
     posY: 38,
-    isoX: 79,
+    isoX: 78,
     isoY: 42,
-    topX: 80,
+    topX: 81,
     topY: 50,
-    overview: 'দ্বৈত উদ্দেশ্যসম্পন্ন (সারফেস ও এয়ার ডিফেন্স) অটো-মেলারা টাইপ ৭৬মিমি দ্রুতগামী নেভাল আর্টিলারি গান, অ্যামুনিশন ফিডার ও শিল্ড।',
+    overview: '৭৬মিমি র‍্যাপিড ফায়ার নেভাল গান টার্রেট, অটোমেটিক অ্যামুনিশন ফিডার ড্রাম, রিকয়েল মেকানিজম, ইলেক্ট্রো-অপটিক্যাল সাইট এবং সংশ্লিষ্ট ড্রাইভ মোটর।',
     specifications: [
+      { label: 'ক্যালিব্যার ও টাইপ', value: '৭৬/৬২ মিমি ওটিও ব্রেডা / কমপ্যাক্ট নেভাল গান' },
       { label: 'ফায়ারিং রেট', value: '১২০ রাউন্ড প্রতি মিনিট' },
-      { label: 'সর্বোচ্চ রেঞ্জ', value: '১৬ কিলোমিটার' },
-      { label: 'কন্ট্রোল মোড', value: 'ফায়ার কন্ট্রোল রাডার ও অপট্রনিক ব্যাকআপ' }
+      { label: 'সর্বোচ্চ রেঞ্জ', value: '১৬,০০০ মিটার' }
     ],
     workshopsAssigned: [
       {
         workshopCode: 'WS-07',
-        workshopNameBn: 'ওয়েপন ও মিসাইল শপ',
-        category: 'অর্ডন্যান্স ও আর্মামেন্ট',
-        oicRankAndName: 'কমান্ডার এইচ কবির',
-        phoneExt: '৪২০৭',
+        workshopNameBn: 'ওয়েপন ও অর্ডন্যান্স শপ (Weapon & Ordnance Shop)',
+        workshopNameEn: 'Weapon & Ordnance Shop',
+        category: 'Ordnance & Armament',
+        oicRankAndName: 'Commander H Kabir',
+        phoneExt: '4207',
         tasks: [
-          '৭৬মিমি গানের ব্যারেল বোর মাইক্রোমিটার পরিমাপ ও গ্যাস সিলিন্ডার ওভারহোল।',
-          'ব্রিচ ব্লক অ্যাসেম্বলি, এক্সট্রাক্টর ক্যাম ও ফায়ারিং পিন ক্লিয়ারেন্স টেস্ট।',
-          'অ্যামুনিশন হোইস্ট ড্রাম ও হাইড্রোলিক রোটেটিং সিলিন্ডার প্রেসার ব্যালেন্সিং।'
-        ]
-      },
-      {
-        workshopCode: 'WS-06',
-        workshopNameBn: 'ইলেকট্রনিক্স ও রাডার শপ',
-        category: 'ইলেকট্রনিক্স ও সেন্সর',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এস রহমান',
-        phoneExt: '৪২০৬',
-        tasks: [
-          'গান ফায়ার কন্ট্রোল রাডার ট্র্যাকিং অ্যান্টেনা সিঙ্ক্রোনাইজেশন।',
-          'ইলেক্ট্রো-অপটিক্যাল ডিরেক্টর (EOD) ক্যামেরা সেন্সর ও লেজার রেঞ্জফাইন্ডার ইন্টারফেসিং।'
+          '৭৬মিমি গান মাউন্ট ব্রিচ ব্লক ও রিকয়েল সিলিন্ডার ডিসঅ্যাসেম্বলি ও লুব্রিকেশন।',
+          'অটোমেটিক অ্যামো হোইস্ট ড্রাম র‍্যাক সার্ভো ড্রাইভ পরিদর্শন ও টেস্ট ফায়ারিং ক্যালিব্রেশন।'
         ]
       },
       {
         workshopCode: 'WS-02',
         workshopNameBn: 'মেশিন শপ (Machine Shop)',
-        category: 'মেকানিক্যাল প্রিসিশন',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এম জামান',
-        phoneExt: '৪২০২',
+        workshopNameEn: 'Machine Shop',
+        category: 'Mechanical Precision',
+        oicRankAndName: 'Lt Commander M Zaman',
+        phoneExt: '4202',
         tasks: [
-          'গান ট্রেইনিং রিং ইন্টারনাল টুথ গিয়ার ডায়াল টেস্ট ইন্ডিকেটর দ্বারা মেশিনিং ও ব্যাকল্যাশ এডজাস্টমেন্ট।'
+          'গান এলিভেশন ট্রানিয়ন বুশিং প্রিসিশন টার্নিং ও লেদ মেশিনিং।',
+          'ব্রিচ লক পিন ও রিকয়েল স্লিভ ডাইমেনশনাল টলারেন্স রি-মেশিনিং।'
+        ]
+      },
+      {
+        workshopCode: 'WS-17',
+        workshopNameBn: 'অপটিক্যাল ও ফায়ার কন্ট্রোল শপ (Optical & Fire Control Shop)',
+        workshopNameEn: 'Optical & Fire Control Shop',
+        category: 'Optics & Fire Control',
+        oicRankAndName: 'Lt Commander F Ahmed',
+        phoneExt: '4217',
+        tasks: [
+          'ইলেক্ট্রো-অপটিক্যাল গান ডিরেক্টর লেন্স প্রিজম ক্লিনজিং ও বোর-সাইট টেলিস্কোপ অ্যালাইনমেন্ট।',
+          'লেজার রেঞ্জফাইন্ডার অপটিক্যাল ট্রান্সমিটার ক্যালিব্রেশন ও নাইট-ভিশন সেন্সর চেক।'
+        ]
+      },
+      {
+        workshopCode: 'WS-10',
+        workshopNameBn: 'পেইন্টিং ও প্রিজারভেশন শপ (Painting & Preservation Shop)',
+        workshopNameEn: 'Painting & Preservation Shop',
+        category: 'Coating & Protection',
+        oicRankAndName: 'Lieutenant R Ahmed',
+        phoneExt: '4210',
+        tasks: [
+          'গান টার্রেট হাউজিং হিট-রেজিস্ট্যান্ট মেরিন গ্রে কোটিং ও অ্যান্টি-রিফ্লেক্টিভ পেইন্টিং।'
         ]
       },
       {
         workshopCode: 'WS-24',
-        workshopNameBn: 'ক্যালিব্রেশন ও ইনস্ট্রুমেন্টেশন ল্যাব',
-        category: 'টেস্টিং ও স্ট্যান্ডার্ড',
-        oicRankAndName: 'লেফটেন্যান্ট জে ইসলাম',
-        phoneExt: '৪২২৪',
+        workshopNameBn: 'ক্যালিব্রেশন ও ইনস্ট্রুমেন্টেশন ল্যাব (Calibration & Instrumentation Lab)',
+        workshopNameEn: 'Calibration & Instrumentation Lab',
+        category: 'Testing & Standards',
+        oicRankAndName: 'Lieutenant J Islam',
+        phoneExt: '4224',
         tasks: [
-          'গান ব্যারেল বোরসাইটিং টেলিস্কোপ ও ডিজিটাল ইনক্লিনোমিটার অ্যাকুরেসি সার্টিফিকেশন।'
+          'গান মাউন্ট অ্যাঙ্গেল ট্র্যাকিং রিজলভার ও প্রেসার ট্রান্সডিউসার প্রিসিশন ক্যালিব্রেশন।'
         ]
       }
     ]
   },
+
+  // =========================================================================
+  // SEC-03: Bridge & Wheelhouse Command Station
+  // =========================================================================
   {
     id: 'sec-03',
     code: 'SEC-03',
     nameBn: 'ব্রিজ ও নেভিগেশন কমান্ড সেন্টার',
     nameEn: 'Bridge & Wheelhouse Command Station',
-    deckLevel: '০২ ডেক সুপারস্ট্রাকচার (Bridge Deck)',
-    locationTag: 'ব্রিজ ও কমান্ড সেন্টার (Bridge)',
+    deckLevel: 'সুপারস্ট্রাকচার ডেক ০৩ (Bridge Deck)',
+    locationTag: 'Bridge & Wheelhouse',
     posX: 68,
     posY: 28,
-    isoX: 66,
-    isoY: 28,
+    isoX: 65,
+    isoY: 30,
     topX: 68,
     topY: 50,
-    overview: 'জাহাজের সেন্ট্রাল নেভিগেশনাল নিয়ন্ত্রণ কেন্দ্র, অটো-পাইলট স্টিয়ারিং কনসোল, ইসিডিআইএস ইলেকট্রনিক চার্ট, স্পিড লগ ও যোগাযোগ ডেক।',
+    overview: 'জাহাজের মূল পরিচালনা ও নেভিগেশন কমান্ড সেন্টার, অটো-পাইলট স্টিয়ারিং কনসোল, নেভিগেশন রাডার, গাইরোকম্পাস ও ভিএইচএফ রেডিও কমিউনিকেশন স্টেশন।',
     specifications: [
-      { label: 'নেভিগেশন সিস্টেম', value: 'ডুয়াল ব্যান্ড এআরপিএ (ARPA) রাডার' },
-      { label: 'কমান্ড লিঙ্ক', value: 'ট্যাকটিক্যাল ডেটালিঙ্ক ও স্যাটেলাইট টার্মিনাল' },
-      { label: 'ভিসিবিলিটি রেঞ্জ', value: '৩৬০ ডিগ্রি প্যানোরামিক উইন্ডো' }
+      { label: 'কমান্ড পজিশন', value: 'সিও, নেভিগেটিং অফিসার ও হেলমসম্যান কনসোল' },
+      { label: 'নেভিগেশন সিস্টেম', value: 'আইএনএস ও ডুয়াল জিপিএস/ইসিডিআইএস সমন্বিত' },
+      { label: 'যোগাযোগ লিংক', value: 'সিকিউর ট্যাকটিক্যাল ভিএইচএফ/এইচএফ লিংক' }
     ],
     workshopsAssigned: [
       {
         workshopCode: 'WS-23',
-        workshopNameBn: 'টেলিকমিউনিকেশন ও নেভ-এইডস শপ',
-        category: 'যোগাযোগ প্রযুক্তি',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার বি দাস',
-        phoneExt: '৪২২৩',
+        workshopNameBn: 'টেলিকমিউনিকেশন ও নেভ-এইডস শপ (Telecommunication & Nav-Aids Shop)',
+        workshopNameEn: 'Telecommunication & Nav-Aids Shop',
+        category: 'Communications',
+        oicRankAndName: 'Lt Commander B Das',
+        phoneExt: '4223',
         tasks: [
-          'জাইরোকম্পাস মাস্টার ইউনিট লেভেলিং, ড্রাফ্ট এরর ও ট্রু নর্থ ক্যালিব্রেশন।',
-          'ডিজিপিএস ও ইসিডিআইএস (ECDIS) সিস্টেম ফার্মওয়্যার ও সিগন্যাল লক টেস্ট।',
-          'ভিএইচএফ মেরিন ব্যান্ড CH-16 ট্রান্সিভার ও এআইএস (AIS) ট্রান্সপন্ডার মেইনটেন্যান্স।'
+          'ট্যাকটিক্যাল ভিএইচএফ/ইউএইচএফ নৌ-রেডিও ট্রান্সসিভার পাওয়ার টেস্ট ও অ্যান্টেনাসমূহ টিউনিং।',
+          'ডিজিটাল জিপিএস রিসিভার ও ব্রিজ সাউন্ড-পাওয়ার্ড অভ্যন্তরীণ ইন্টারকম লাইন মেরামত।'
         ]
       },
       {
         workshopCode: 'WS-06',
-        workshopNameBn: 'ইলেকট্রনিক্স ও রাডার শপ',
-        category: 'ইলেকট্রনিক্স ও সেন্সর',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এস রহমান',
-        phoneExt: '৪২০৬',
+        workshopNameBn: 'ইলেকট্রনিক্স ও রাডার শপ (Electronics & Radar Shop)',
+        workshopNameEn: 'Electronics & Radar Shop',
+        category: 'Electronics & Sensors',
+        oicRankAndName: 'Lt Commander S Rahman',
+        phoneExt: '4206',
         tasks: [
-          'এক্স-ব্যান্ড ও এস-ব্যান্ড নেভিগেশন রাডার ডিসপ্লে কনসোল মেইনটেন্যান্স ও টিউনআপ।'
+          'নেভিগেশন এক্স-ব্যান্ড ও এস-ব্যান্ড রাডার ডিসপ্লে কনসোল ডায়াগনস্টিকস ও পিআরএফ টেস্ট।',
+          'গাইরো রিপিটার সিঙ্ক্রোনাইজেশন ও ট্যাকটিক্যাল ইসিডিআইএস ইন্টারফেস চেক।'
         ]
       },
       {
         workshopCode: 'WS-17',
-        workshopNameBn: 'হাইড্রোলিক ও নিউমেটিক শপ',
-        category: 'কন্ট্রোল ফ্লুইডস',
-        oicRankAndName: 'লেফটেন্যান্ট এম করিম',
-        phoneExt: '৪২১৭',
+        workshopNameBn: 'অপটিক্যাল ও ফায়ার কন্ট্রোল শপ (Optical & Fire Control Shop)',
+        workshopNameEn: 'Optical & Fire Control Shop',
+        category: 'Optics & Fire Control',
+        oicRankAndName: 'Lt Commander F Ahmed',
+        phoneExt: '4217',
         tasks: [
-          'ব্রিজ হেলম হুইল হাইড্রোলিক টেলিমিটার পাইপিং লিক টেস্ট ও এয়ার ব্লিডিং।'
+          'ব্রিজ পেলোরাস প্রিজম অপটিক্যাল অ্যালাইনমেন্ট ও হাই-পাওয়ার্ড নেভাল দূরবীন সার্ভিসিং।',
+          'ইনফ্রারেড নাইট ভিশন সার্চলাইট অপটিক্স কোয়ার্টজ গ্লাস ক্লিনিং ও ক্যালিব্রেশন।'
         ]
       },
       {
-        workshopCode: 'WS-16',
-        workshopNameBn: 'কম্পিউটার ও নেটওয়ার্ক শপ',
-        category: 'আইটি ও সাইবার',
-        oicRankAndName: 'লেফটেন্যান্ট আর হোসেন',
-        phoneExt: '৪২১৬',
+        workshopCode: 'WS-13',
+        workshopNameBn: 'সেইল লফট ও সারভাইভাল ইকুইপমেন্ট শপ (Sail Loft & Survival Equipment Shop)',
+        workshopNameEn: 'Sail Loft & Survival Equipment Shop',
+        category: 'Life Saving Equipment',
+        oicRankAndName: 'Sub-Lieutenant P K Roy',
+        phoneExt: '4213',
         tasks: [
-          'ইন্টারনাল কমান্ড আইপি ইন্টারকম ও ব্রিজ ওয়ার্কস্টেশন অপারেটিং সিস্টেম আপডেট।'
+          'ব্রিজ উইং ঝড় ও রোদ প্রতিরোধক ক্যানভাস কভার ফিটিং ও মেরামত।',
+          'আন্তর্জাতিক নৌ-সংকেত সিগন্যাল ফ্ল্যাগ ও ব্রিজ সেফটি ক্যানভাস ইন্সপেকশন।'
+        ]
+      },
+      {
+        workshopCode: 'WS-15',
+        workshopNameBn: 'শিপরাইট ও কার্পেন্ট্রি শপ (Shipwright & Carpentry Shop)',
+        workshopNameEn: 'Shipwright & Carpentry Shop',
+        category: 'Docking & Woodwork',
+        oicRankAndName: 'Lieutenant N Talukdar',
+        phoneExt: '4215',
+        tasks: [
+          'হুইলহাউস টিকউড চার্ট টেবিল পলিশিং ও ড্রয়ার লক হার্ডওয়্যার মেরামত।',
+          'ব্রিজ ওয়াটারটাইট অ্যাক্সেস ডোর নিওপ্রিন গ্যাসকেট প্রতিস্থাপন।'
         ]
       }
     ]
   },
+
+  // =========================================================================
+  // SEC-04: Main 3D Surveillance Radar & Rigging Mast
+  // =========================================================================
   {
     id: 'sec-04',
     code: 'SEC-04',
     nameBn: 'মেইন রাডার ও রিগিং মাস্ট',
     nameEn: 'Main 3D Surveillance Radar & Rigging Mast',
-    deckLevel: '০৩ ডেক মেইন মাস্ট (Top Mast)',
-    locationTag: 'মেইন রাডার ও মাস্ট (Main Mast)',
+    deckLevel: 'টপ-মাস্ট প্ল্যাটফর্ম (Superstructure Mast)',
+    locationTag: 'Radar Mast',
     posX: 58,
     posY: 12,
     isoX: 56,
-    isoY: 10,
+    isoY: 15,
     topX: 58,
     topY: 50,
-    overview: 'দূরপাল্লার ৩ডি আকাশ ও সমুদ্র স্ক্যানিং সার্ভেল্যান্স রাডার অ্যান্টেনা, আইএফএফ (IFF), ইএসএম ইলেকট্রনিক সাপোর্ট মেজার্স ও রিগিং মাস্ট ক্যাবলস।',
+    overview: 'জাহাজের প্রধান ৩ডি লং-রেঞ্জ এয়ার ও সারফেস সার্চ রাডার মাস্ট, আইএফএফ ইন্টারোগেটর অ্যান্টেনা, ইলেকট্রনিক ওয়ারফেয়ার (ইডব্লিউ) সেন্সর ও হেভি রিগিং মাস্ট স্ট্রাকচার।',
     specifications: [
-      { label: 'রাডার রেঞ্জ', value: '২৫০ কিমি এয়ার/সারফেস সার্চ' },
-      { label: 'মাস্ট হাইট', value: 'ওয়াটারলাইন থেকে ২৬ মিটার' },
-      { label: 'স্টে ওয়্যার টেনশন', value: 'প্রাক-নির্ধারিত ১২.৫ কিলোপ্যাসকেল' }
+      { label: 'রাডার টাইপ', value: '৩ডি ফেজড অ্যারে / মাল্টি-টার্গেট এয়ার ট্র্যাকার' },
+      { label: 'ডিটেকশন রেঞ্জ', value: '২৫০ কিমি এয়ারক্রাফট / ৬০ কিমি মিসাইল' },
+      { label: 'মাস্ট উচ্চতা', value: 'ওয়াটারলাইন থেকে ২২.৫ মিটার' }
     ],
     workshopsAssigned: [
       {
         workshopCode: 'WS-01',
         workshopNameBn: 'রিগিং শপ (Rigging Shop)',
-        category: 'ডেক ও লিফটিং গিয়ার',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এস কে মাহমুদ',
-        phoneExt: '৪২০১',
+        workshopNameEn: 'Rigging Shop',
+        category: 'Deck & Lifting Gear',
+        oicRankAndName: 'SAKIB HOSEN (OFFICE WRITER)',
+        phoneExt: '8116',
         tasks: [
-          'উচ্চ উচ্চতার মাস্ট স্টে-ওয়্যার (Stay Wires) টেনশন টেস্ট ও টার্নবাকল লক ওয়্যারিং।',
-          'সিগন্যাল হ্যালিয়ার্ড রোপস ও ফ্ল্যাগ পুলি ব্লক ইন্সপেকশন ও রিপ্লেসমেন্ট।',
-          'রাডার স্ক্যানার সার্ভিসিংয়ের জন্য সেফটি হারনেস ক্যাবল ও জিব-ক্রেন স্থাপন।'
+          'মাস্ট স্টে ওয়্যার রোপস, টানবাকল ও হেভি ক্ল্যাম্পের টেনশন পরিমাপ ও নিরাপত্তা সার্টিফিকেশন।',
+          'অ্যান্টেনা উত্তোলন হ্যালিয়ার্ড ও ক্লাইম্বিং সেফটি ল্যাডার কেবলস টেস্ট।'
         ]
       },
       {
         workshopCode: 'WS-06',
-        workshopNameBn: 'ইলেকট্রনিক্স ও রাডার শপ',
-        category: 'ইলেকট্রনিক্স ও সেন্সর',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এস রহমান',
-        phoneExt: '৪২০৬',
+        workshopNameBn: 'ইলেকট্রনিক্স ও রাডার শপ (Electronics & Radar Shop)',
+        workshopNameEn: 'Electronics & Radar Shop',
+        category: 'Electronics & Sensors',
+        oicRankAndName: 'Lt Commander S Rahman',
+        phoneExt: '4206',
         tasks: [
-          '৩ডি সার্ভেল্যান্স রাডার ম্যাগনেট্রন/টিডব্লিউটি ওভারহোল ও ট্রান্সমিটার আউটপুট টেস্ট।',
-          'রোটেটিং পেডেস্টাল স্লিপ রিং ক্লিনিং ও কো-অ্যাক্সিয়াল ওয়েভগাইড ডিহাইড্রেটর প্রেশার চেক।'
+          '৩ডি রাডার রোটেটিং অ্যান্টেনা ওয়েভগাইড আরএফ কাপলার টেস্ট ও মোটর ড্রাইভ ওভারহোল।',
+          'আইএফএফ ট্রান্সপন্ডার সেন্সর ও ইডব্লিউ রিসিভার হেড আরএফ সিগন্যাল লস টেস্ট।'
         ]
       },
       {
-        workshopCode: 'WS-05',
-        workshopNameBn: 'ইলেকট্রিক্যাল পাওয়ার শপ',
-        category: 'ইলেকট্রিক্যাল',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার টি এ ইসলাম',
-        phoneExt: '৪২০৫',
+        workshopCode: 'WS-04',
+        workshopNameBn: 'ওয়েল্ডিং ও ফেব্রিকেশন শপ (Welding & Fabrication Shop)',
+        workshopNameEn: 'Welding & Fabrication Shop',
+        category: 'Metal Joining',
+        oicRankAndName: 'Lieutenant K R Hasan',
+        phoneExt: '4204',
         tasks: [
-          'মাস্টহেড নেভিগেশন ও এয়ারক্রাফ্ট অবস্ট্রাকশন লাইটিং সার্কিট ক্যাবলিং রিপেয়ার।'
+          'মাস্ট ল্যাটিস ফ্রেম মেটাল জয়েন্ট টিআইজি ওয়েল্ডিং ও ব্র্যাকেট রিইনফোর্সমেন্ট।'
         ]
       },
       {
-        workshopCode: 'WS-12',
-        workshopNameBn: 'পেইন্টিং ও স্যান্ডব্লাস্টিং শপ',
-        category: 'সারফেস ফিনিশিং',
-        oicRankAndName: 'লেফটেন্যান্ট এস আহমেদ',
-        phoneExt: '৪২১২',
+        workshopCode: 'WS-20',
+        workshopNameBn: 'ইলেক্ট্রোপ্লেটিং ও গ্যালভানাইজিং শপ (Electroplating & Galvanizing Shop)',
+        workshopNameEn: 'Electroplating & Galvanizing Shop',
+        category: 'Surface Treatment',
+        oicRankAndName: 'Lieutenant M Rafiq',
+        phoneExt: '4220',
         tasks: [
-          'উচ্চ উচ্চতার মাস্ট মেটাল পৃষ্ঠে মেরিন গ্রেড অ্যান্টি-করোশন জিংক সিলিকেট কোটিং।'
+          'মাস্ট ফাস্টেনার ও ইউ-বোল্ট হট-ডিপ জিঙ্ক গ্যালভানাইজিং ও করোশন রেজিস্ট্যান্স ট্রিটমেন্ট।'
+        ]
+      },
+      {
+        workshopCode: 'WS-25',
+        workshopNameBn: 'কোয়ালিটি কন্ট্রোল ও এনডিটি ল্যাব (Quality Control & NDT Lab)',
+        workshopNameEn: 'Quality Control & NDT Lab',
+        category: 'Quality Assurance',
+        oicRankAndName: 'Lt Commander M K Chowdhury',
+        phoneExt: '4225',
+        tasks: [
+          'মাস্ট জয়েন্ট ওয়েল্ডের আল্ট্রাসনিক ফ্ল ডিটেকশন (UT) ও লাইটনিং গ্রাউন্ডিং রেজিস্ট্যান্স মেজারমেন্ট।'
         ]
       }
     ]
   },
+
+  // =========================================================================
+  // SEC-05: Combat Information Center (CIC) & Sonar Suite
+  // =========================================================================
   {
     id: 'sec-05',
     code: 'SEC-05',
     nameBn: 'কমব্যাট ইনফরমেশন সেন্টার (সিআইসি) ও সোনার রুম',
     nameEn: 'Combat Information Center (CIC) & Sonar Suite',
-    deckLevel: 'মেইন ডেক মিডশিপ (Deck 2 Mid)',
-    locationTag: 'সিআইসি ও সোনার (CIC / Sonar)',
+    deckLevel: 'ডেক ০২ (Command Deck Mid)',
+    locationTag: 'Combat Information Center',
     posX: 58,
     posY: 44,
-    isoX: 58,
-    isoY: 42,
+    isoX: 56,
+    isoY: 48,
     topX: 58,
     topY: 50,
-    overview: 'রণকৌশলগত সেন্ট্রাল নার্ভ সেন্টার, ট্যাকটিক্যাল ডেটা ডিসপ্লে কনসোল, অস্ত্র নিয়ন্ত্রণ সিস্টেম এবং হাল-মাউন্টেড অ্যাকোস্টিক সোনার কনসোল।',
+    overview: 'সিআইসি বা কমব্যাট ইনফরমেশন সেন্টার যুদ্ধজাহাজের মূল নার্ভ সেন্টার। এখানে কমব্যাট ম্যানেজমেন্ট সিস্টেম (সিএমএস), হাল-মাউন্টেড সোনার প্রোসেসর এবং অস্ত্র নিয়ন্ত্রণ কনসোল স্থাপিত।',
     specifications: [
-      { label: 'কমব্যাট সিস্টেম', value: 'ইন্টিগ্রেটেড সি৪আই নেভাল সিএমএস' },
-      { label: 'কনসোল সংখ্যা', value: '১২টি মাল্টি-ফাংশন ট্যাকটিক্যাল ডিসপ্লে' },
-      { label: 'অপারেটিং পরিবেশ', value: '২০° সেলসিয়াসে নিয়ন্ত্রিত তাপমাত্রা' }
+      { label: 'কমান্ড প্রসেসর', value: 'মিল-স্পেক ডুয়াল রিডানড্যান্ট ট্যাকটিক্যাল ল্যান' },
+      { label: 'সোনার ফ্রিকোয়েন্সি', value: 'অ্যাক্টিভ/প্যাসিভ মিডিয়াম ফ্রিকোয়েন্সি (৭.৫ kHz)' },
+      { label: 'অপারেটর কনসোল', value: '৮টি ট্যাকটিক্যাল ওয়ারফেয়ার ওয়ার্কস্টেশন' }
     ],
     workshopsAssigned: [
       {
         workshopCode: 'WS-06',
-        workshopNameBn: 'ইলেকট্রনিক্স ও রাডার শপ',
-        category: 'ইলেকট্রনিক্স ও সেন্সর',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এস রহমান',
-        phoneExt: '৪২০৬',
+        workshopNameBn: 'ইলেকট্রনিক্স ও রাডার শপ (Electronics & Radar Shop)',
+        workshopNameEn: 'Electronics & Radar Shop',
+        category: 'Electronics & Sensors',
+        oicRankAndName: 'Lt Commander S Rahman',
+        phoneExt: '4206',
         tasks: [
-          'ট্যাকটিক্যাল কনসোল সিগন্যাল প্রসেসর বোর্ড টেস্ট ও কালার ভিডিও ড্রাইভ মেইনটেন্যান্স।',
-          'সোনার প্রসেসিং র‍্যাকের প্রি-অ্যাম্প্লিফায়ার মডিউল অসিলেশন পরিমাপ।'
+          'ট্যাকটিক্যাল ডিসপ্লে কনসোল পিসিবি কার্ড ডায়াগনস্টিকস ও ডাটা বাস কেবল টেস্ট।',
+          'সোনার অ্যাকোস্টিক সিগন্যাল প্রসেসিং র্যাক ও ট্রান্সডিউসার প্রি-অ্যামপ্লিফায়ার ক্যালিব্রেশন।'
         ]
       },
       {
-        workshopCode: 'WS-16',
-        workshopNameBn: 'কম্পিউটার ও নেটওয়ার্ক শপ',
-        category: 'আইটি ও সাইবার',
-        oicRankAndName: 'লেফটেন্যান্ট আর হোসেন',
-        phoneExt: '৪২১৬',
+        workshopCode: 'WS-05',
+        workshopNameBn: 'ইলেকট্রিক্যাল পাওয়ার শপ (Electrical Power Workshop)',
+        workshopNameEn: 'Electrical Power Workshop',
+        category: 'Electrical Power',
+        oicRankAndName: 'Lt Commander T A Islam',
+        phoneExt: '4205',
         tasks: [
-          'ট্যাকটিক্যাল ডেটা নেটওয়ার্ক (TDN) গিগাবিট সুইচ ও ফাইবার অপটিক প্যাচ কর্ড রিপ্লেসমেন্ট।',
-          'সিআইসি সার্ভার ক্লাস্টার লোড ব্যালেন্সিং ও ব্যাকআপ ড্রাইভ ডায়াগনস্টিকস।'
+          'সিআইসি ক্লিন আনইন্টারেপ্টেবল পাওয়ার সাপ্লাই (ইউপিএস) ও ৪০০ হার্টজ কনভার্টার ইন্সপেকশন।',
+          'ট্যাকটিক্যাল ইলেকট্রনিক্স ইমার্জেন্সি ডিসি বাসবার অটোমেটিক চেঞ্জওভার সুইচ টেস্ট।'
         ]
       },
       {
-        workshopCode: 'WS-10',
-        workshopNameBn: 'এয়ার কন্ডিশনিং ও রেফ্রিজারেশন শপ',
-        category: 'এইচভিএসি (HVAC)',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এফ আলী',
-        phoneExt: '৪২১০',
+        workshopCode: 'WS-18',
+        workshopNameBn: 'রেফ্রিজারেশন ও এইচভিএসি শপ (Refrigeration & HVAC Shop)',
+        workshopNameEn: 'Refrigeration & HVAC Shop',
+        category: 'HVAC Systems',
+        oicRankAndName: 'Lieutenant G Mostafa',
+        phoneExt: '4218',
         tasks: [
-          'সিআইসি ইলেকট্রনিক্স প্রিসিশন এসি চিলার এয়ার হ্যান্ডলিং ইউনিট (AHU) ও ফিল্টার সার্ভিসিং।'
+          'সিআইসি সার্ভার ক্যাবিনেট প্রিসিশন কুলিং চিলার ও এয়ার হ্যান্ডলিং ইউনিট (এএইচইউ) রক্ষণাবেক্ষণ।',
+          'কমব্যাট ইলেকট্রনিক্স রুম আর্দ্রতা নিয়ন্ত্রণ (ডিহিউমিডিফায়ার) ও ডাক্ট ক্লিনিং।'
+        ]
+      },
+      {
+        workshopCode: 'WS-24',
+        workshopNameBn: 'ক্যালিব্রেশন ও ইনস্ট্রুমেন্টেশন ল্যাব (Calibration & Instrumentation Lab)',
+        workshopNameEn: 'Calibration & Instrumentation Lab',
+        category: 'Testing & Standards',
+        oicRankAndName: 'Lieutenant J Islam',
+        phoneExt: '4224',
+        tasks: [
+          'সোনার ফ্রিকোয়েন্সি ট্রান্সমিটার স্পেকট্রাম অ্যানালাইজার টেস্ট ও সিগনাল ক্যালিব্রেশন।'
         ]
       },
       {
         workshopCode: 'WS-22',
-        workshopNameBn: 'আন্ডারওয়াটার রিপেয়ার ও ডাইভিং ইউনিট',
-        category: 'সাব-সি অপারেশন',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার টি মাহমুদ',
-        phoneExt: '৪২২২',
+        workshopNameBn: 'আন্ডারওয়াটার রিপেয়ার ও ডাইভিং ইউনিট (Underwater Repairs & Diving Unit)',
+        workshopNameEn: 'Underwater Repairs & Diving Unit',
+        category: 'Subsea Operations',
+        oicRankAndName: 'Lt Commander T Mahmud',
+        phoneExt: '4222',
         tasks: [
-          'জাহাজের তলদেশে সোনার ডোম অ্যাকোস্টিক উইন্ডো স্ক্র্যাচ ও বায়ো-ফাউলিং স্কুবা ডাইভার দ্বারা ক্লিনিং।'
+          'হাল-মাউন্টেড সোনার ডোম রাবার উইন্ডো ডাইভার ভিজ্যুয়াল পরিদর্শন ও ডি-ফাউলিং।'
         ]
       }
     ]
   },
+
+  // =========================================================================
+  // SEC-06: Midship Anti-Ship Missile Launchers & Torpedo Deck
+  // =========================================================================
   {
     id: 'sec-06',
     code: 'SEC-06',
     nameBn: 'মিডশিপ মিসাইল ও টর্পেডো ডেক',
     nameEn: 'Midship Anti-Ship Missile Launchers & Torpedo Deck',
-    deckLevel: 'আপার ডেক মিডশিপ (01 Deck)',
-    locationTag: 'মিসাইল ও টর্পেডো ডেক (Missile Deck)',
+    deckLevel: 'মেইন ডেক মিডশিপ (Deck 1 Mid)',
+    locationTag: 'Missile Deck & Torpedo Tubes',
     posX: 46,
     posY: 34,
-    isoX: 47,
-    isoY: 34,
+    isoX: 45,
+    isoY: 38,
     topX: 46,
     topY: 50,
-    overview: 'সারফেস-টু-সারফেস অ্যান্টি-শিপ মিসাইল ক্যানিস্টার বক্স (সি-৭০৪ / সি-৮০২), ৩২৪মিমি ট্রিপল টর্পেডো টিউব ও ল্যাশিং সাপোর্ট সিস্টেম।',
+    overview: 'সি-৮০২ অ্যান্টি-শিপ ক্রুজ মিসাইল ক্যানিস্টার লঞ্চার, ব্লাস্ট ডিফ্লেক্টর শিল্ড, ট্রিপল অ্যান্টি-সাবমেরিন টর্পেডো টিউব ও নিউমেটিক চার্জিং স্টেশন।',
     specifications: [
-      { label: 'মিসাইল ক্ষমতা', value: '৮ x সি-৮০২ অ্যান্টি-শিপ গ্লাইডার' },
-      { label: 'টর্পেডো সিস্টেম', value: '২ x ট্রিপল ৩২৪মিমি অ্যান্টি-সাবমেরিন টিউব' },
-      { label: 'লঞ্চ অ্যাঙ্গেল', value: '২০ ডিগ্রি ফিক্সড এলিভেশন' }
+      { label: 'মিসাইল সিস্টেম', value: '৪ x সি-৮০২এ লং-রেঞ্জ সি-স্কিমিং মিসাইল' },
+      { label: 'টর্পেডো টাইপ', value: '৩২৪মিমি ট্রিপল এএসডব্লিউ টর্পেডো টিউব' },
+      { label: 'লঞ্চিং প্রেসার', value: 'নিউমেটিক ১৮০ বার প্রেসার ডিসচার্জ' }
     ],
     workshopsAssigned: [
       {
         workshopCode: 'WS-07',
-        workshopNameBn: 'ওয়েপন ও মিসাইল শপ',
-        category: 'অর্ডন্যান্স ও আর্মামেন্ট',
-        oicRankAndName: 'কমান্ডার এইচ কবির',
-        phoneExt: '৪২০৭',
+        workshopNameBn: 'ওয়েপন ও অর্ডন্যান্স শপ (Weapon & Ordnance Shop)',
+        workshopNameEn: 'Weapon & Ordnance Shop',
+        category: 'Ordnance & Armament',
+        oicRankAndName: 'Commander H Kabir',
+        phoneExt: '4207',
         tasks: [
-          'মিসাইল লঞ্চার ক্যানিস্টার ফাউন্ডেশন লক মেকানিজম ও টর্পেডো টিউব এয়ার ফ্লাস্ক প্রেসার টেস্ট (২৫০ বার)।',
-          'ফায়ারিং কন্ট্রোল ইন্টারফেস আমবিলিকেল কেবল টার্মিনাল রেজিস্ট্যান্স মেজারমেন্ট।'
-        ]
-      },
-      {
-        workshopCode: 'WS-01',
-        workshopNameBn: 'রিগিং শপ (Rigging Shop)',
-        category: 'ডেক ও লিফটিং গিয়ার',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এস কে মাহমুদ',
-        phoneExt: '৪২০১',
-        tasks: [
-          'মিসাইল রিলোডিং ডেভিট ক্রেন ওয়্যার রোপ ইন্সপেকশন ও ৫-টন লোড সার্টিফিকেশন।',
-          'টর্পেডো হ্যান্ডলিং ট্রলি চেইন ও ল্যাশিং ওয়্যার টান পরীক্ষা।'
+          'সি-৮০২ মিসাইল ক্যানিস্টার লক মেকানিজম ও ব্লাস্ট শিল্ড ইজেকশন হিঞ্জ ওভারহোল।',
+          '৩২৪মিমি টর্পেডো টিউব নিউমেটিক ইজেকশন ইন্টারলক ও ম্যানুয়াল সেফটি ল্যাচ চেক।'
         ]
       },
       {
         workshopCode: 'WS-04',
-        workshopNameBn: 'ওয়েল্ডিং ও ফেব্রিকেশন শপ',
-        category: 'মেটাল জয়েনিং',
-        oicRankAndName: 'লেফটেন্যান্ট কে আর হাসান',
-        phoneExt: '৪২০৪',
+        workshopNameBn: 'ওয়েল্ডিং ও ফেব্রিケーション শপ (Welding & Fabrication Shop)',
+        workshopNameEn: 'Welding & Fabrication Shop',
+        category: 'Metal Joining',
+        oicRankAndName: 'Lieutenant K R Hasan',
+        phoneExt: '4204',
         tasks: [
-          'মিসাইল ব্লাস্ট ডিফ্লেক্টর মেটাল শিল্ড ওয়েল্ডিং ও ফাউন্ডেশন স্ট্রেংথ এনডিটি টেস্ট।'
+          'মিসাইল লঞ্চার পেডেস্টাল ডেক ফাউন্ডেশন ওয়েল্ড সিম ও ব্লাস্ট ডিফ্লেক্টর ফ্রেম মেরামত।'
         ]
       },
       {
-        workshopCode: 'WS-18',
-        workshopNameBn: 'ফায়ার ফাইটিং ও সেফটি শপ',
-        category: 'নিরাপত্তা ও উদ্ধার',
-        oicRankAndName: 'লেফটেন্যান্ট এম এ হক',
-        phoneExt: '৪২১৮',
+        workshopCode: 'WS-19',
+        workshopNameBn: 'হাইড্রোলিক ও নিউমেটিক শপ (Hydraulic & Pneumatic Shop)',
+        workshopNameEn: 'Hydraulic & Pneumatic Shop',
+        category: 'Fluid Power',
+        oicRankAndName: 'Lt Commander H Hasan',
+        phoneExt: '4219',
         tasks: [
-          'মিসাইল ডেক অটো-ড্রেঞ্চিং ওয়াটার স্প্রিংকলার ভালভ টেস্ট ও ফায়ার হোজ বক্স অডিট।'
+          'টর্পেডো ডিসচার্জ হাই প্রেসার নিউমেটিক এয়ার বোটল প্রেশার ড্রপ টেস্ট (২০০ বার)।'
         ]
       },
       {
         workshopCode: 'WS-13',
-        workshopNameBn: 'সেইল লফট ও সারভাইভাল ইকুইপমেন্ট শপ',
-        category: 'লাইফ সেভিং ইকুইপমেন্ট',
-        oicRankAndName: 'সাব-লেফটেন্যান্ট পি কে রায়',
-        phoneExt: '৪২১৩',
+        workshopNameBn: 'সেইল লফট ও সারভাইভাল ইকুইপমেন্ট শপ (Sail Loft & Survival Equipment Shop)',
+        workshopNameEn: 'Sail Loft & Survival Equipment Shop',
+        category: 'Life Saving Equipment',
+        oicRankAndName: 'Sub-Lieutenant P K Roy',
+        phoneExt: '4213',
         tasks: [
-          'লাইফ র্যাফ্ট হাইড্রলিক রিলিজ ইউনিট (HRU) অডিট ও রেসকিউ বোট সেফটি ক্যানভাস কভার।'
+          'মিডশিপ ক্র্যাডলে অবস্থিত ইনফ্লেটেবল লাইফ র‍্যাফটস ইন্সপেকশন ও হাইড্রোস্ট্যাটিক রিলিজ ইউনিট সার্ভিসিং।'
+        ]
+      },
+      {
+        workshopCode: 'WS-25',
+        workshopNameBn: 'কোয়ালিটি কন্ট্রোল ও এনডিটি ল্যাব (Quality Control & NDT Lab)',
+        workshopNameEn: 'Quality Control & NDT Lab',
+        category: 'Quality Assurance',
+        oicRankAndName: 'Lt Commander M K Chowdhury',
+        phoneExt: '4225',
+        tasks: [
+          'টর্পেডো টিউব মাউন্ট ও মিসাইল ফাউন্ডেশন বোল্টসের রেডিওগ্রাফিক এক্স-রে পরীক্ষা।'
         ]
       }
     ]
   },
+
+  // =========================================================================
+  // SEC-07: Main Engine Machinery Propulsion Room
+  // =========================================================================
   {
     id: 'sec-07',
     code: 'SEC-07',
     nameBn: 'মেইন প্রপালশন ও ইঞ্জিন রুম',
     nameEn: 'Main Engine Machinery Propulsion Room',
-    deckLevel: 'লোয়ার প্ল্যাটফর্ম ডেক (Engine Room)',
-    locationTag: 'মেইন ইঞ্জিন (Main Engine)',
+    deckLevel: 'লোয়ার ডেক / প্ল্যাটফর্ম ডেক (Deck 4 Engine Room)',
+    locationTag: 'Main Engine',
     posX: 42,
     posY: 64,
     isoX: 42,
-    isoY: 62,
+    isoY: 66,
     topX: 42,
     topY: 50,
-    overview: 'জাহাজের চালিকাশক্তি মূল মেরিন ডিজেল ইঞ্জিন (Main Diesel Engines), টার্বোচার্জার, রিডাকশন গিয়ারবক্স, ক্লাচ ও লুব্রিকেশন সিস্টেম।',
+    overview: 'জাহাজের প্রধান চালিকাশক্তি মেইন প্রপালশন ডিজেল ইঞ্জিন ও গ্যাস টারবাইন ড্রাইভ, রিডাকশন গিয়ারবক্স, ফুয়েল ইনজেক্টর পাম্প, টার্বোচার্জার ও লুব্রিকেশন অয়েল সিস্টেম।',
     specifications: [
-      { label: 'ইঞ্জিন টাইপ', value: 'টুইন এসইএমটি পিয়েলস্টিক মেরিন ডিজেল' },
-      { label: 'মোট আউটপুট', value: '১৬,০০০ কিলোওয়াট (২২,০০০ বিএইচপি)' },
-      { label: 'সর্বোচ্চ গতি', value: '২৮ নট (৫০+ কিমি/ঘণ্টা)' }
+      { label: 'ইঞ্জিন মডেল', value: 'টুইন এসইএমটি পিয়েলস্টিক / এমটিইউ মেরিন ডিজেল' },
+      { label: 'মোট আউটপুট', value: '১৬,০০০ কিলোওয়াট (২১,৫০০ বিএইচপি)' },
+      { label: 'সর্বোচ্চ গতিবেগ', value: '২৮ নটিক্যাল মাইল/ঘণ্টা' }
     ],
     workshopsAssigned: [
       {
         workshopCode: 'WS-08',
-        workshopNameBn: 'আইসি ইঞ্জিন ও ডিজেল শপ',
-        category: 'প্রপালশন ও ডিজেল',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এম এ রহমান',
-        phoneExt: '৪২০৮',
+        workshopNameBn: 'আইসি ইঞ্জিন ও ডিজেল শপ (IC Engine & Diesel Shop)',
+        workshopNameEn: 'IC Engine & Diesel Shop',
+        category: 'Propulsion & Diesel',
+        oicRankAndName: 'Lt Commander M A Rahman',
+        phoneExt: '4208',
         tasks: [
-          'মেইন ইঞ্জিন সিলিন্ডার হেড, পিস্টন রিমুভাল, লাইনার ডিস্কেল ও ওয়াশ।'
+          'মেইন ইঞ্জিনের সিলিন্ডার হেড ডিকোকিং, ফুয়েল ইনজেক্টর প্রেসার টিউনিং (২৫০ বার)।',
+          'টার্বোচার্জার বিয়ারিং ক্লিয়ারেন্স পর্যবেক্ষণ, এক্সহস্ট গ্যাস টেম্পারেচার ব্যালেন্সিং।'
+        ]
+      },
+      {
+        workshopCode: 'WS-12',
+        workshopNameBn: 'গ্যাস টারবাইন ও প্রপালশন শপ (Gas Turbine & Propulsion Shop)',
+        workshopNameEn: 'Gas Turbine & Propulsion Shop',
+        category: 'Main Propulsion',
+        oicRankAndName: 'Lt Commander D K Banik',
+        phoneExt: '4212',
+        tasks: [
+          'গ্যাস টারবাইন ব্লেডস বোরোস্কোপ পরিদর্শন ও পাওয়ার টারবাইন ভাইব্রেশন অ্যানালাইসিস।',
+          'মেইন রিডাকশন গিয়ারবক্স ক্লাচ ও ফ্লেক্সিবল মেম্ব্রেন কাপলিং এলাইনমেন্ট।'
         ]
       },
       {
         workshopCode: 'WS-02',
         workshopNameBn: 'মেশিন শপ (Machine Shop)',
-        category: 'মেকানিক্যাল প্রিসিশন',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এম জামান',
-        phoneExt: '৪২০২',
+        workshopNameEn: 'Machine Shop',
+        category: 'Mechanical Precision',
+        oicRankAndName: 'Lt Commander M Zaman',
+        phoneExt: '4202',
         tasks: [
-          'রিডাকশন গিয়ার ড্রাইভ শ্যাফট লেজার অ্যালাইনমেন্ট ও বেয়ারিং বুশ মেজারমেন্ট।'
+          'প্রপালশন শ্যাফটিং স্লিভ প্রিসিশন টার্নিং, ভালভ সিট গ্রাইন্ডিং ও ল্যাপিং।',
+          'ইঞ্জিন সেন্ট্রিফিউগাল পাম্প শ্যাফট ও ইম্পেলার ডায়নামিক ব্যালেন্সিং।'
         ]
       },
       {
         workshopCode: 'WS-09',
-        workshopNameBn: 'পাইপ ও প্লাম্বিং শপ',
-        category: 'পাইপিং সিস্টেম',
-        oicRankAndName: 'লেফটেন্যান্ট এ কে আজাদ',
-        phoneExt: '৪২০৯',
+        workshopNameBn: 'পাইপ ও প্লাম্বিং শপ (Pipe Fitting & Plumbing Shop)',
+        workshopNameEn: 'Pipe Fitting & Plumbing Shop',
+        category: 'Piping Systems',
+        oicRankAndName: 'Lieutenant A K Azad',
+        phoneExt: '4209',
         tasks: [
-          'মেইন ইঞ্জিন লুব অয়েল হাই-প্রেসার পাইপ ও কুলিং সি-ওয়াটার পাইপ মেরামত ও প্রেশার টেস্ট।'
+          'হাই প্রেসার ফুয়েল ও লুব অয়েল পাইপলাইনের ফ্ল্যাঞ্জ গ্যাসকেট প্রতিস্থাপন ও প্রেসার টেস্ট।',
+          'কুলিং সি-ওয়াটার সাকশন ও ডিসচার্জ লাইনের ব্রোঞ্জ ভালভ ওভারহোল।'
         ]
       },
       {
-        workshopCode: 'WS-14',
-        workshopNameBn: 'লুব্রিকেশন ও ট্রাইবোলজি ল্যাব',
-        category: 'কেমিক্যাল ও অ্যানালাইসিস',
-        oicRankAndName: 'লেফটেন্যান্ট এন ইসলাম',
-        phoneExt: '৪২১৪',
+        workshopCode: 'WS-16',
+        workshopNameBn: 'টুল রুম ও প্রিসিশন শপ (Tool Room & Precision Shop)',
+        workshopNameEn: 'Tool Room & Precision Shop',
+        category: 'Tooling & Gauges',
+        oicRankAndName: 'Lieutenant S Ahmed',
+        phoneExt: '4216',
         tasks: [
-          'মেইন ইঞ্জিন ক্র্যাঙ্ককেস লুব অয়েল ভিসকোসিটি, টিবিএন (TBN) ও মেটাল ওয়্যার পার্টিকল টেস্ট।'
+          'ইঞ্জিন সিলিন্ডার হেড হাই-ক্যাপাসিটি হাইড্রোলিক টর্ক রেঞ্চ ও মাইক্রোমিটার প্রিসিশন মেজারমেন্ট।'
         ]
       },
       {
-        workshopCode: 'WS-25',
-        workshopNameBn: 'কোয়ালিটি কন্ট্রোল ও এনডিটি ল্যাব',
-        category: 'কোয়ালিটি অ্যাসিউরেন্স',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এম কে চৌধুরী',
-        phoneExt: '৪২২৫',
+        workshopCode: 'WS-24',
+        workshopNameBn: 'ক্যালিব্রেশন ও ইনস্ট্রুমেন্টেশন ল্যাব (Calibration & Instrumentation Lab)',
+        workshopNameEn: 'Calibration & Instrumentation Lab',
+        category: 'Testing & Standards',
+        oicRankAndName: 'Lieutenant J Islam',
+        phoneExt: '4224',
         tasks: [
-          'মেইন ইঞ্জিন ক্র্যাঙ্কশ্যাফ্ট ম্যাগনেটিক পার্টিকেল ইন্সপেকশন (MPI) ও সিলিন্ডার এনডিটি ল্যাব অ্যানালাইসিস।'
+          'এক্সহস্ট পাইরোমিটার সেন্সর, লুব অয়েল প্রেসার ট্র্যান্সমিটার ও ট্যাকোমিটার ক্যালিব্রেশন।'
         ]
       }
     ]
   },
+
+  // =========================================================================
+  // SEC-08: Diesel Generators (DG-1, DG-2) & Aux Boiler Room
+  // =========================================================================
   {
     id: 'sec-08',
     code: 'SEC-08',
     nameBn: 'ডিজেল জেনারেটর (ডিজি-১ ও ডিজি-২) ও অক্সিলারি বয়লার',
     nameEn: 'Diesel Generators (DG-1, DG-2) & Aux Boiler Room',
-    deckLevel: 'অক্সিলারি ইঞ্জিন স্পেস (Deck 3 Aft)',
-    locationTag: 'ডিজি-১ (DG-1)',
+    deckLevel: 'হোল্ড ডেক / ট্যাঙ্ক টপ (Deck 4 Aux Room)',
+    locationTag: 'Diesel Generator 1 (DG-1)',
     posX: 33,
     posY: 62,
-    isoX: 34,
-    isoY: 60,
+    isoX: 33,
+    isoY: 64,
     topX: 33,
     topY: 50,
-    overview: 'জাহাজের বিদ্যুৎ সরবরাহকারী হেভি ডিউটি জেনারেটর সেট (ডিজি-১ ও ডিজি-২), অক্সিলারি স্টিম বয়লার এবং সেন্ট্রাল সুইচবোর্ড ফিডার।',
+    overview: 'জাহাজের বিদ্যুৎ উৎপাদনকারী মূল ডিজেল জেনারেটর (ডিজি-১, ডিজি-২), প্রধান ৪০০ ভোল্ট মেইন সুইচবোর্ড (এমএসবি), অক্সিলারি স্টিম বয়লার ও ফুয়েল পিউরিফায়ার সেন্ট্রিফিউজ।',
     specifications: [
-      { label: 'জেনারেটর ক্যাপাসিটি', value: '৩ x ৬৫০ কিলোওয়াট ডিজেল অল্টারনেটর' },
-      { label: 'সিস্টেম ভোল্টেজ', value: '৪৪০ ভোল্ট ৩-ফেজ ৬০ হার্টজ' },
-      { label: 'বয়লার স্টিম ক্যাপাসিটি', value: '১.৫ টন প্রতি ঘণ্টা @ ৭ বার' }
+      { label: 'ডিজি সংখ্যা ও মডেল', value: '৪ x ৬৪০ কিলোওয়াট ক্যাটারপিলার/কামিন্স' },
+      { label: 'উৎপাদিত বিদ্যুৎ', value: '৪১৫ ভোল্ট এসি, ৩ ফেজ, ৫০ হার্টজ' },
+      { label: 'অক্সিলারি বয়লার প্রেসার', value: '৭ বার স্যাচুরেটেড স্টিম' }
     ],
     workshopsAssigned: [
       {
-        workshopCode: 'WS-08',
-        workshopNameBn: 'আইসি ইঞ্জিন ও ডিজেল শপ',
-        category: 'প্রপালশন ও ডিজেল',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এম এ রহমান',
-        phoneExt: '৪২০৮',
-        tasks: [
-          'ডিজি-১ ও ডিজি-২ অক্সিলারি ডিজেল ইঞ্জিনের টপ ওভারহোল, ফুয়েল ইনজেক্টর ও গভর্নর টিউনিং।'
-        ]
-      },
-      {
         workshopCode: 'WS-05',
-        workshopNameBn: 'ইলেকট্রিক্যাল পাওয়ার শপ',
-        category: 'ইলেকট্রিক্যাল',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার টি এ ইসলাম',
-        phoneExt: '৪২০৫',
+        workshopNameBn: 'ইলেকট্রিক্যাল পাওয়ার শপ (Electrical Power Workshop)',
+        workshopNameEn: 'Electrical Power Workshop',
+        category: 'Electrical Power',
+        oicRankAndName: 'Lt Commander T A Islam',
+        phoneExt: '4205',
         tasks: [
-          'অল্টারনেটর এভিআর (AVR) ভোল্টেজ স্ট্যাবিলিটি ক্যালিব্রেশন ও মেগার ইনসুলেশন টেস্ট।'
+          'অল্টারনেটর স্টেটর মেগার টেস্ট (>৫ MΩ), এভিআর লোড ড্রুপ রেগুলেশন ক্যালিব্রেশন।',
+          'মেইন সুইচবোর্ড এসিবি (এয়ার সার্কিট ব্রেকার) ট্রিপ কার্ভ ও ওভারকারেন্ট রিলে টেস্ট।'
         ]
       },
       {
-        workshopCode: 'WS-21',
-        workshopNameBn: 'ব্যাটারি ও পাওয়ার স্টোরেজ শপ',
-        category: 'পাওয়ার ব্যাকআপ ও ডিসি স্টোরেজ',
-        oicRankAndName: 'লেফটেন্যান্ট আই খন্দকার',
-        phoneExt: '৪২২১',
+        workshopCode: 'WS-08',
+        workshopNameBn: 'আইসি ইঞ্জিন ও ডিজেল শপ (IC Engine & Diesel Shop)',
+        workshopNameEn: 'IC Engine & Diesel Shop',
+        category: 'Propulsion & Diesel',
+        oicRankAndName: 'Lt Commander M A Rahman',
+        phoneExt: '4208',
         tasks: [
-          'ডিজি ক্র্যাঙ্কিং হেভি ব্যাটারি ব্যাংক ডিসচার্জ টেস্ট ও ইউপিএস এমার্জেন্সি সেল চেকিং।'
+          'ডিজি ইঞ্জিনের লুব অয়েল কুলার ফ্ল্যাশিং ও কেমিক্যাল ক্লিনিং।',
+          'ফুয়েল ইনজেক্টর নজল ও গভর্নর স্পিড ড্রুপ অ্যাডজাস্টমেন্ট।'
         ]
       },
       {
         workshopCode: 'WS-11',
-        workshopNameBn: 'বয়লার ও স্টিম টারবাইন শপ',
-        category: 'থার্মাল ও স্টিম',
-        oicRankAndName: 'লেফটেন্যান্ট পি কে ভৌমিক',
-        phoneExt: '৪২১১',
+        workshopNameBn: 'বয়লার ও স্টিম শপ (Boiler & Steam Shop)',
+        workshopNameEn: 'Boiler & Steam Shop',
+        category: 'Steam Systems',
+        oicRankAndName: 'Lieutenant J Alam',
+        phoneExt: '4211',
         tasks: [
-          'অক্সিলারি বয়লার ওয়াটার টিউব ডিক্যালসিফিকেশন, বার্নার নজল ক্লিন ও সেফটি ভালভ পপ টেস্ট।'
+          'অক্সিলারি বয়লার বার্নার জেট ক্লিনিং, ড্রাম স্কেল রিমুভাল ও ওয়াটার কেমিক্যাল ট্রিটমেন্ট।',
+          'স্টিম সেফটি ভালভ হাইড্রোলিক পপিং প্রেসার টেস্ট (৭.৫ বার)।'
+        ]
+      },
+      {
+        workshopCode: 'WS-21',
+        workshopNameBn: 'ব্যাটারি ও পাওয়ার স্টোরেজ শপ (Battery & Power Storage Shop)',
+        workshopNameEn: 'Battery & Power Storage Shop',
+        category: 'Power Systems',
+        oicRankAndName: 'Lieutenant I Khandaker',
+        phoneExt: '4221',
+        tasks: [
+          'ডিজি ২৪ ভোল্ট স্টার্টিং হেভি-ডিউটি ব্যাটারি ব্যাংক ক্যাপাসিটি লোড টেস্ট ও ডিসচার্জ সাইক্লিং।'
         ]
       },
       {
         workshopCode: 'WS-09',
-        workshopNameBn: 'পাইপ ও প্লাম্বিং শপ',
-        category: 'পাইপিং সিস্টেম',
-        oicRankAndName: 'লেফটেন্যান্ট এ কে আজাদ',
-        phoneExt: '৪২০৯',
+        workshopNameBn: 'পাইপ ও প্লাম্বিং শপ (Pipe Fitting & Plumbing Shop)',
+        workshopNameEn: 'Pipe Fitting & Plumbing Shop',
+        category: 'Piping Systems',
+        oicRankAndName: 'Lieutenant A K Azad',
+        phoneExt: '4209',
         tasks: [
-          'স্টিম ও কনডেনসেট পাইপিং স্টিম ট্র্যাপ ও সেফটি রিলিজ পাইপ ভালভ প্রতিস্থাপন।'
+          'স্টিম পাইপলাইন থার্মাল ইনসুলেশন ক্ল্যাডিং ও বয়লার ব্লোडाउन ভালভ রিপ্লেসমেন্ট।'
+        ]
+      },
+      {
+        workshopCode: 'WS-14',
+        workshopNameBn: 'ফাউন্ড্রি ও মেটাল কাস্টিং শপ (Foundry & Metal Casting Shop)',
+        workshopNameEn: 'Foundry & Metal Casting Shop',
+        category: 'Metal Casting',
+        oicRankAndName: 'Lieutenant M Shafiq',
+        phoneExt: '4214',
+        tasks: [
+          'বয়লার ফিড ওয়াটার পাম্প ব্রোঞ্জ ইম্পেলার ও কাস্ট আয়রন পাইপ ফ্ল্যাঞ্জ কাস্টিং সার্ভিসিং।'
         ]
       }
     ]
   },
+
+  // =========================================================================
+  // SEC-09: AC Chiller & Reverse Osmosis Fresh Water Plant
+  // =========================================================================
   {
     id: 'sec-09',
     code: 'SEC-09',
     nameBn: 'এসি চিলার ও ফ্রেশ ওয়াটার আরও প্ল্যান্ট',
     nameEn: 'AC Chiller & Reverse Osmosis Fresh Water Plant',
-    deckLevel: 'ফরোয়ার্ড অক্সিলারি ফ্ল্যাট (Deck 2 Fore)',
-    locationTag: 'চিলার ও এসি প্ল্যান্ট (AC Chiller)',
+    deckLevel: 'ডেক ৩ (Technical Auxiliary Flat)',
+    locationTag: 'AC Chiller & Fresh Water Plant',
     posX: 70,
     posY: 60,
-    isoX: 72,
-    isoY: 58,
+    isoX: 68,
+    isoY: 62,
     topX: 70,
     topY: 50,
-    overview: 'জাহাজের সেন্ট্রাল রেফ্রিজারেশন ইউনিট, সি-ওয়াটার ডিস্যালিনেশন প্ল্যান্ট, পানীয় জল উৎপাদন ও কুলিং কয়েল সিস্টেম।',
+    overview: 'জাহাজের সেন্ট্রাল মেরিন এয়ার কন্ডিশনিং চিলার ইউনিট, ফ্রেশ ওয়াটার রিভার্স অসমোসিস (আরও) ডিস্যালিনেশন প্ল্যান্ট, পোর্টেবল ওয়াটার ডিস্ট্রিবিউশন পাম্প ও কোল্ড প্রভিশন স্টোরেজ।',
     specifications: [
-      { label: 'চিলার ক্যাপাসিটি', value: '২ x ১৫০ টন রেফ্রিজারেশন (TR)' },
-      { label: 'আরও প্ল্যান্ট উৎপাদন', value: 'দৈনিক ২৫,০০০ লিটার সুপেয় মিষ্টি পানি' },
-      { label: 'রেফ্রিজারেন্ট টাইপ', value: 'পরিবেশবান্ধব R-134a মেরিন গ্রেড' }
+      { label: 'চিলার ক্যাপাসিটি', value: '২ x ১৫০ টন সেন্ট্রিফিউগাল রেফ্রিজারেশন' },
+      { label: 'আরও প্ল্যান্ট আউটপুট', value: '৪০ টন বিশুদ্ধ মিষ্টি পানি প্রতিদিন' },
+      { label: 'কোল্ড রুম তাপমাত্রা', value: '-১৮ ডিগ্রি সেলসিয়াস (ডিপ ফ্রিজ)' }
     ],
     workshopsAssigned: [
       {
-        workshopCode: 'WS-10',
-        workshopNameBn: 'এয়ার কন্ডিশনিং ও রেফ্রিজারেশন শপ',
-        category: 'এইচভিএসি (HVAC)',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এফ আলী',
-        phoneExt: '৪২১০',
+        workshopCode: 'WS-18',
+        workshopNameBn: 'রেফ্রিজারেশন ও এইচভিএসি শপ (Refrigeration & HVAC Shop)',
+        workshopNameEn: 'Refrigeration & HVAC Shop',
+        category: 'HVAC Systems',
+        oicRankAndName: 'Lieutenant G Mostafa',
+        phoneExt: '4218',
         tasks: [
-          'চিলার স্ক্রু কম্প্রেসার ওভারহোল, রেফ্রিজারেন্ট লিক চেকিং ও সি-ওয়াটার কনডেন্সার ডি-স্কেলিং।'
-        ]
-      },
-      {
-        workshopCode: 'WS-15',
-        workshopNameBn: 'কেমিক্যাল ও ওয়াটার ট্রিটমেন্ট ল্যাব',
-        category: 'ওয়াটার অ্যানালাইসিস',
-        oicRankAndName: 'লেফটেন্যান্ট এস মন্ডল',
-        phoneExt: '৪২১৫',
-        tasks: [
-          'আরও মেমব্রেন পার্মিয়েট ওয়াটার টিডিএস (TDS) ও ক্লোরিনেশন পিউরিটি ল্যাব টেস্ট।'
+          'চিলার কম্প্রেশার সিলিন্ডার হেড সার্ভিসিং ও ফ্রেয়ন গ্যাস লিক ডিটেকশন টেস্ট।',
+          'ইভাপোরেটর কয়েল কেমিক্যাল ডিস্কেলিং ও এক্সপ্যানশন ভালভ সুপারহিট ক্যালিব্রেশন।'
         ]
       },
       {
         workshopCode: 'WS-09',
-        workshopNameBn: 'পাইপ ও প্লাম্বিং শপ',
-        category: 'পাইপিং সিস্টেম',
-        oicRankAndName: 'লেফটেন্যান্ট এ কে আজাদ',
-        phoneExt: '৪২০৯',
+        workshopNameBn: 'পাইপ ও প্লাম্বিং শপ (Pipe Fitting & Plumbing Shop)',
+        workshopNameEn: 'Pipe Fitting & Plumbing Shop',
+        category: 'Piping Systems',
+        oicRankAndName: 'Lieutenant A K Azad',
+        phoneExt: '4209',
         tasks: [
-          'হাই-প্রেসার স্টেইনলেস স্টিল আরও ফিড লাইন ও ফ্রেশ ওয়াটার ট্রান্সফার পাম্প মেরামত।'
+          'আরও প্ল্যান্ট হাই-প্রেসার ব্রাইন রিভার্স লাইন ও ফিল্টার হাউজিং ও-রিং রিপ্লেসমেন্ট।',
+          'পোর্টেবল ওয়াটার ডিস্ট্রিবিউশন কপার পাইপলাইন সোল্ডারিং ও হাইড্রোস্ট্যাটিক টেস্ট।'
         ]
       },
       {
         workshopCode: 'WS-05',
-        workshopNameBn: 'ইলেকট্রিক্যাল পাওয়ার শপ',
-        category: 'ইলেকট্রিক্যাল',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার টি এ ইসলাম',
-        phoneExt: '৪২০৫',
+        workshopNameBn: 'ইলেকট্রিক্যাল পাওয়ার শপ (Electrical Power Workshop)',
+        workshopNameEn: 'Electrical Power Workshop',
+        category: 'Electrical Power',
+        oicRankAndName: 'Lt Commander T A Islam',
+        phoneExt: '4205',
         tasks: [
-          'চিলার মোটর কন্ট্রোল সেন্টার (MCC) ম্যাগনেটিক কন্টাক্টর ও থার্মাল ওভারলোড রিলে টেস্ট।'
-        ]
-      }
-    ]
-  },
-  {
-    id: 'sec-10',
-    code: 'SEC-10',
-    nameBn: 'ফ্লাইট ডেক, হ্যাঙ্গার ও হেলিপ্যাড স্টেশন',
-    nameEn: 'Flight Deck & Helicopter Landing Station (Helipad)',
-    deckLevel: 'আফ্ট ডেক ০১ (Flight Deck)',
-    locationTag: 'ফ্লাইট ডেক (Flight Deck)',
-    posX: 20,
-    posY: 44,
-    isoX: 20,
-    isoY: 42,
-    topX: 20,
-    topY: 50,
-    overview: 'নেভাল হেলিকপ্টার উড্ডয়ন ও অবতরণ ডেক, ল্যান্ডিং গ্রিড ট্র্যাপ, হ্যাঙ্গার ট্রলিস, অ্যাভিয়েশন ফুয়েল বাঙ্কারিং ও সেফটি নেট।',
-    specifications: [
-      { label: 'হেলিকপ্টার ক্লাস', value: '১০-টন অগাস্টা ওয়েস্টল্যান্ড / ডলফিন' },
-      { label: 'ট্রাভার্সিং গ্রিড', value: 'ফরাসি হারপুন লকিং মেকানিজম' },
-      { label: 'ফুয়েল স্টেশন', value: 'এভিয়েশন জেট এ-১ প্রেসারাইজড বাঙ্কারিং' }
-    ],
-    workshopsAssigned: [
-      {
-        workshopCode: 'WS-01',
-        workshopNameBn: 'রিগিং শপ (Rigging Shop)',
-        category: 'ডেক ও লিফটিং গিয়ার',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এস কে মাহমুদ',
-        phoneExt: '৪২০১',
-        tasks: [
-          'হেলিকপ্টার টাই-ডাউন ল্যাশিং চেইন ও স্ট্রেচার টেনশন টেস্ট ও রিকন্ডিশনিং।',
-          'ফ্লাইট ডেক সাইড বাউন্ডারি সেফটি নেট ড্রপিং হিঞ্জ ও রোপ মেশ টেস্ট।'
-        ]
-      },
-      {
-        workshopCode: 'WS-18',
-        workshopNameBn: 'ফায়ার ফাইটিং ও সেফটি শপ',
-        category: 'নিরাপত্তা ও উদ্ধার',
-        oicRankAndName: 'লেফটেন্যান্ট এম এ হক',
-        phoneExt: '৪২১৮',
-        tasks: [
-          'ফ্লাইট ডেক টুইন এজেন্ট একুয়াস ফিল্ম ফর্মিং ফোম (AFFF) মনিটর ও ক্যানন ডিসচার্জ টেস্ট।'
-        ]
-      },
-      {
-        workshopCode: 'WS-05',
-        workshopNameBn: 'ইলেকট্রিক্যাল পাওয়ার শপ',
-        category: 'ইলেকট্রিক্যাল',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার টি এ ইসলাম',
-        phoneExt: '৪২০৫',
-        tasks: [
-          'ফ্লাইট ডেক গ্লাইড পাথ ইন্ডিকেটর (GPI) ও অমনি-ডিরেকশনাল পেরিমিটার গ্রিন লাইটিং মেইনটেন্যান্স।'
-        ]
-      },
-      {
-        workshopCode: 'WS-17',
-        workshopNameBn: 'হাইড্রোলিক ও নিউমেটিক শপ',
-        category: 'কন্ট্রোল ফ্লুইডস',
-        oicRankAndName: 'লেফটেন্যান্ট এম করিম',
-        phoneExt: '৪২১৭',
-        tasks: [
-          'হারপুন লক গ্রিড হাইড্রোলিক একচুয়েটর প্রেসার হোল্ডিং ও ভালভ সিল রিপ্লেসমেন্ট।'
-        ]
-      }
-    ]
-  },
-  {
-    id: 'sec-11',
-    code: 'SEC-11',
-    nameBn: 'স্টার্ন, প্রপেলার শ্যাফটিং ও স্টিয়ারিং গিয়ার',
-    nameEn: 'Stern, Twin Propellers & Steering Gear Compartment',
-    deckLevel: 'আফ্ট পিক ডেক (Aft Peak Compartment)',
-    locationTag: 'স্টিয়ারিং গিয়ার রুম (Steering Gear)',
-    posX: 9,
-    posY: 60,
-    isoX: 9,
-    isoY: 60,
-    topX: 9,
-    topY: 50,
-    overview: 'জাহাজের দিক পরিবর্তনকারী রুডার স্টিয়ারিং হাইড্রোলিক র‌্যাম সিলিন্ডার, স্টার্ন টিউব সিল, ইন্টারমিডিয়েট শ্যাফ্ট ও টুইন স্ক্রু প্রপেলার।',
-    specifications: [
-      { label: 'প্রপেলার সংখ্যা', value: '২ x ৪-ব্লেড হাই-স্কিউড নিকেল ব্রোঞ্জ স্ক্রু' },
-      { label: 'স্টিয়ারিং অ্যাকশন', value: '৩৫ ডিগ্রি পোর্ট থেকে ৩৫ ডিগ্রি স্টারবোর্ড ২৮ সেকেন্ডে' },
-      { label: 'শ্যাফট ডায়ামিটার', value: '৪৫০ মিমি সলিড ফরজিং স্টিল' }
-    ],
-    workshopsAssigned: [
-      {
-        workshopCode: 'WS-26',
-        workshopNameBn: 'প্রপেলার ও শ্যাফট অ্যালাইনমেন্ট শপ',
-        category: 'প্রপালশন ড্রাইভ',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এস এন শিকদার',
-        phoneExt: '৪২২৬',
-        tasks: [
-          'টেইল শ্যাফট লেজার অপটিক্যাল অ্যালাইনমেন্ট ও ভাইব্রেশন অ্যানালাইসিস।',
-          'প্রপেলার ব্লেড পিচ ভ্যারিয়েশন ও ড্যামেজ রিপেয়ার।'
-        ]
-      },
-      {
-        workshopCode: 'WS-17',
-        workshopNameBn: 'হাইড্রোলিক ও নিউমেটিক শপ',
-        category: 'কন্ট্রোল ফ্লুইডস',
-        oicRankAndName: 'লেফটেন্যান্ট এম করিম',
-        phoneExt: '৪২১৭',
-        tasks: [
-          'রুডার স্টিয়ারিং রাম হাইড্রোলিক সিলিন্ডার সিল রিপ্লেসমেন্ট ও অটো-পাইলট ট্র্যাকিং ক্যালিব্রেশন।'
+          'চিলার পাম্প মোটর ড্রাইভার স্টার্টার ও অটো-কাট অফ কন্ট্রোল সার্কিট মেরামত।'
         ]
       },
       {
         workshopCode: 'WS-02',
         workshopNameBn: 'মেশিন শপ (Machine Shop)',
-        category: 'মেকানিক্যাল প্রিসিশন',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার এম জামান',
-        phoneExt: '৪২০২',
+        workshopNameEn: 'Machine Shop',
+        category: 'Mechanical Precision',
+        oicRankAndName: 'Lt Commander M Zaman',
+        phoneExt: '4202',
         tasks: [
-          'রুডার পিন্টল বুশিং টার্নিং ও স্টার্ন টিউব হোয়াইট মেটাল বেয়ারিং প্রিসিশন মেশিনিং।'
+          'চিলার ওয়াটার পাম্প শ্যাফট মেশিনিং ও ব্রোঞ্জ ইম্পেলার মেকানিক্যাল সিল ল্যাপিং।'
         ]
       },
       {
-        workshopCode: 'WS-22',
-        workshopNameBn: 'আন্ডারওয়াটার রিপেয়ার ও ডাইভিং ইউনিট',
-        category: 'সাব-সি অপারেশন',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার টি মাহমুদ',
-        phoneExt: '৪২২২',
+        workshopCode: 'WS-20',
+        workshopNameBn: 'ইলেক্ট্রোপ্লেটিং ও গ্যালভানাইজিং শপ (Electroplating & Galvanizing Shop)',
+        workshopNameEn: 'Electroplating & Galvanizing Shop',
+        category: 'Surface Treatment',
+        oicRankAndName: 'Lieutenant M Rafiq',
+        phoneExt: '4220',
         tasks: [
-          'পানির নিচে প্রপেলার ব্লেড পোলিশিং ও রোপ কাটার সেফটি ক্লিয়ারেন্স অডিট।'
+          'স্যানিটারি পাইপিং ও ভালভ কম্পোনেন্টসে নিকেল-জিঙ্ক কোটিং প্রটেকশন প্রয়োগ।'
         ]
       }
     ]
   },
+
+  // =========================================================================
+  // SEC-10: Flight Deck & Helicopter Landing Station (Helipad)
+  // =========================================================================
+  {
+    id: 'sec-10',
+    code: 'SEC-10',
+    nameBn: 'ফ্লাইট ডেক, হ্যাঙ্গার ও হেলিপ্যাড স্টেশন',
+    nameEn: 'Flight Deck & Helicopter Landing Station (Helipad)',
+    deckLevel: 'ফ্লাইট ডেক / হ্যাঙ্গার ডেক (Aft Deck 01)',
+    locationTag: 'Flight Deck & Quarter Deck',
+    posX: 20,
+    posY: 44,
+    isoX: 18,
+    isoY: 48,
+    topX: 20,
+    topY: 50,
+    overview: 'এডভান্সড নেভাল হেলিকপ্টার ট্রাভার্সিং গ্রিড, এভিয়েশন রিফুয়েলিং সিস্টেম, ফোল্ডিং হ্যাঙ্গার ডোর, হেভি টাই-ডাউন ল্যাশিংস, ফ্লাইট ডেক নন-স্কিড পেইন্টিং ও কোয়ার্টার ডেক মুরিং জোন।',
+    specifications: [
+      { label: 'হেলো ক্যাপাসিটি', value: 'এডব্লিউ১০৯ / ডলফিন ১০ টন ক্যাটাগরি' },
+      { label: 'ট্রাভার্সিং সিস্টেম', value: 'হাইড্রো-মেকানিক্যাল গ্রিড অ্যান্ড হারপুন' },
+      { label: 'ল্যান্ডিং সার্কেল সাইজ', value: '১৫.২ মিটার ডায়ামিটার' }
+    ],
+    workshopsAssigned: [
+      {
+        workshopCode: 'WS-01',
+        workshopNameBn: 'রিগিং শপ (Rigging Shop)',
+        workshopNameEn: 'Rigging Shop',
+        category: 'Deck & Lifting Gear',
+        oicRankAndName: 'SAKIB HOSEN (OFFICE WRITER)',
+        phoneExt: '8116',
+        tasks: [
+          'হেলিকপ্টার টাই-ডাউন ল্যাশিং চেইন ও কুইক রিলিজ পেলিক্যান হুক প্রুফ টেস্ট।',
+          'ফ্লাইট ডেক পেরিমিটার সেফটি ড্রপ-নেট কেবলস ও হ্যাঙ্গার ওভারহেড হোইস্ট ওয়্যার চেক।'
+        ]
+      },
+      {
+        workshopCode: 'WS-10',
+        workshopNameBn: 'পেইন্টিং ও প্রিজারভেশন শপ (Painting & Preservation Shop)',
+        workshopNameEn: 'Painting & Preservation Shop',
+        category: 'Coating & Protection',
+        oicRankAndName: 'Lieutenant R Ahmed',
+        phoneExt: '4210',
+        tasks: [
+          'ফ্লাইট ডেক হেভি নন-স্কিড কোটিং এপ্লিকেশন ও হেলো ল্যান্ডিং ট্যাকটিক্যাল মার্কিং রি-পেইন্টিং।',
+          'হ্যাঙ্গার ফ্লোর ও অ্যাফট ড্রেন চ্যানেল অ্যান্টি-করোসিভ পলিউরেথেন পেইন্টিং।'
+        ]
+      },
+      {
+        workshopCode: 'WS-19',
+        workshopNameBn: 'হাইড্রোলিক ও নিউমেটিক শপ (Hydraulic & Pneumatic Shop)',
+        workshopNameEn: 'Hydraulic & Pneumatic Shop',
+        category: 'Fluid Power',
+        oicRankAndName: 'Lt Commander H Hasan',
+        phoneExt: '4219',
+        tasks: [
+          'হ্যাঙ্গার রোলিং ডোর হাইড্রোলিক অ্যাকচুয়েটর ও ট্রাভার্সিং উইঞ্চ মোটর সিলিং টেস্ট।'
+        ]
+      },
+      {
+        workshopCode: 'WS-13',
+        workshopNameBn: 'সেইল লফট ও সারভাইভাল ইকুইপমেন্ট শপ (Sail Loft & Survival Equipment Shop)',
+        workshopNameEn: 'Sail Loft & Survival Equipment Shop',
+        category: 'Life Saving Equipment',
+        oicRankAndName: 'Sub-Lieutenant P K Roy',
+        phoneExt: '4213',
+        tasks: [
+          'হেলিকপ্টার ক্র্যাশ রেসকিউ ফায়ার স্যুট, থার্মাল প্রোটেকশন কম্বল ও উইন্ডসক চেক।'
+        ]
+      },
+      {
+        workshopCode: 'WS-15',
+        workshopNameBn: 'শিপরাইট ও কার্পেন্ট্রি শপ (Shipwright & Carpentry Shop)',
+        workshopNameEn: 'Shipwright & Carpentry Shop',
+        category: 'Docking & Woodwork',
+        oicRankAndName: 'Lieutenant N Talukdar',
+        phoneExt: '4215',
+        tasks: [
+          'হ্যাঙ্গার ইন্টেরিয়র টিম্বার চক ব্লকস ও কম্পোজিট ওয়াটারটাইট গ্যাসকেট প্রতিস্থাপন।'
+        ]
+      },
+      {
+        workshopCode: 'WS-27',
+        workshopNameBn: 'ইয়ার্ড সার্ভিসেস ও হেভি ট্রান্সপোর্ট (Yard Services & Heavy Transport)',
+        workshopNameEn: 'Yard Services & Heavy Transport',
+        category: 'Yard Logistics',
+        oicRankAndName: 'Lieutenant R U Ahmed',
+        phoneExt: '4227',
+        tasks: [
+          'ফ্লাইট ডেক মোবাইল ক্রেন লিফটিং ও ডকইয়ার্ড হেভি গ্রাউন্ড সাপোর্ট ইকুইপমেন্ট সার্ভিস।'
+        ]
+      }
+    ]
+  },
+
+  // =========================================================================
+  // SEC-11: Stern, Twin Propellers & Steering Gear Compartment
+  // =========================================================================
+  {
+    id: 'sec-11',
+    code: 'SEC-11',
+    nameBn: 'স্টার্ন, প্রপেলার শ্যাফটিং ও স্টিয়ারিং গিয়ার',
+    nameEn: 'Stern, Twin Propellers & Steering Gear Compartment',
+    deckLevel: 'স্টার্ন ডেক ৪ / আফটারপিক (Stern Flat)',
+    locationTag: 'Steering Gear & Propellers',
+    posX: 9,
+    posY: 60,
+    isoX: 8,
+    isoY: 62,
+    topX: 9,
+    topY: 50,
+    overview: 'জাহাজের স্টার্ন টুইন প্রপেলার, কাটলেস বেয়ারিং, স্টার্ন টিউব সিল, ইলেকট্রো-হাইড্রোলিক স্টিয়ারিং গিয়ার র‍্যাম ও ব্যালেন্সড রাডার মেকানিজম।',
+    specifications: [
+      { label: 'প্রপেলার টাইপ', value: 'টুইন ৪-ব্লেড কন্ট্রোল্ড পিচ নিকেল-অ্যালুমিনিয়াম ব্রোঞ্জ' },
+      { label: 'রাডার সিস্টেম', value: 'টুইন ব্যালেন্সড স্পেড রাডার উইথ হাইড্রোলিক রাম' },
+      { label: 'স্টিয়ারিং প্রেসার', value: '১৬০ বার ডাবল অ্যাক্টিং হাইড্রোলিক প্রেসার' }
+    ],
+    workshopsAssigned: [
+      {
+        workshopCode: 'WS-26',
+        workshopNameBn: 'প্রপেলার ও শ্যাফট অ্যালাইনমেন্ট শপ (Propeller & Shaft Alignment Shop)',
+        workshopNameEn: 'Propeller & Shaft Alignment Shop',
+        category: 'Propulsion Drive',
+        oicRankAndName: 'Lt Commander S N Shikdar',
+        phoneExt: '4226',
+        tasks: [
+          'টেইলশ্যাফট ডায়নামিক ব্যালেন্সিং, স্টার্ন টিউব কাটলেস বিয়ারিং ক্লিয়ারেন্স মেজারমেন্ট।',
+          'কন্ট্রোলেবল পিচ প্রপেলার (সিপিপি) ব্লেড পিচ অ্যাকচুয়েটর মেকানিজম সার্ভিসিং।'
+        ]
+      },
+      {
+        workshopCode: 'WS-19',
+        workshopNameBn: 'হাইড্রোলিক ও নিউমেটিক শপ (Hydraulic & Pneumatic Shop)',
+        workshopNameEn: 'Hydraulic & Pneumatic Shop',
+        category: 'Fluid Power',
+        oicRankAndName: 'Lt Commander H Hasan',
+        phoneExt: '4219',
+        tasks: [
+          'ইলেক্ট্রো-হাইড্রোলিক স্টিয়ারিং গিয়ার রাম সিলিং কিট রিপ্লেসমেন্ট ও প্রেসার রিলিফ টেস্ট।',
+          'টেলিমোটর হাইড্রোলিক ট্রান্সমিটার পাম্প ও রাডার অ্যাঙ্গেল ইন্ডিকেটর ক্যালিব্রেশন।'
+        ]
+      },
+      {
+        workshopCode: 'WS-12',
+        workshopNameBn: 'গ্যাস টারবাইন ও প্রপালশন শপ (Gas Turbine & Propulsion Shop)',
+        workshopNameEn: 'Gas Turbine & Propulsion Shop',
+        category: 'Main Propulsion',
+        oicRankAndName: 'Lt Commander D K Banik',
+        phoneExt: '4212',
+        tasks: [
+          'শ্যাফট থ্রাস্ট বিয়ারিং প্যাড পরিদর্শন ও বাল্কহেড গ্ল্যান্ড সিমিট্রি চেক।'
+        ]
+      },
+      {
+        workshopCode: 'WS-02',
+        workshopNameBn: 'মেশিন শপ (Machine Shop)',
+        workshopNameEn: 'Machine Shop',
+        category: 'Mechanical Precision',
+        oicRankAndName: 'Lt Commander M Zaman',
+        phoneExt: '4202',
+        tasks: [
+          'রাডার পিন্টল বুশিং প্রিসিশন বোরিং ও কাপলিং বোল্টস লেদ টার্নিং।'
+        ]
+      },
+      {
+        workshopCode: 'WS-14',
+        workshopNameBn: 'ফাউন্ড্রি ও মেটাল কাস্টিং শপ (Foundry & Metal Casting Shop)',
+        workshopNameEn: 'Foundry & Metal Casting Shop',
+        category: 'Metal Casting',
+        oicRankAndName: 'Lieutenant M Shafiq',
+        phoneExt: '4214',
+        tasks: [
+          'ব্রোঞ্জ প্রপেলার ব্লেড ক্যাভিটেশন ড্যামেজ কাস্টিং রিপেয়ার ও স্টার্ন টিউব গ্ল্যান্ড রিং তৈরি।'
+        ]
+      },
+      {
+        workshopCode: 'WS-16',
+        workshopNameBn: 'টুল রুম ও প্রিসিশন শপ (Tool Room & Precision Shop)',
+        workshopNameEn: 'Tool Room & Precision Shop',
+        category: 'Tooling & Gauges',
+        oicRankAndName: 'Lieutenant S Ahmed',
+        phoneExt: '4216',
+        tasks: [
+          'শ্যাফট রান-আউট অপটিক্যাল ডায়াল গেজেস ক্যালিব্রেশন ও টেপার প্লাগ গেজ ইন্সপেকশন।'
+        ]
+      }
+    ]
+  },
+
+  // =========================================================================
+  // SEC-12: Underwater Hull Plating, Sea Chests & Cathodic Protection
+  // =========================================================================
   {
     id: 'sec-12',
     code: 'SEC-12',
     nameBn: 'আন্ডারওয়াটার হাল প্লেটিং, সি-চেস্ট ও জিংক অ্যানোড',
     nameEn: 'Underwater Hull Plating, Sea Chests & Cathodic Protection',
-    deckLevel: 'জাহাজের তলদেশ ও কীল (Bottom Bilge & Keel)',
-    locationTag: 'হাল ও সি-চেস্ট (Hull & Sea Chest)',
+    deckLevel: 'সাব-ওয়াটারলাইন হাল ও কিল (Underwater Hull & Keel)',
+    locationTag: 'Hull, Keel & Underwater Hull',
     posX: 52,
     posY: 80,
     isoX: 52,
     isoY: 82,
     topX: 52,
     topY: 50,
-    overview: 'জাহাজের জলমগ্ন বহিরাবরণ, কুলিং ওয়াটার ইনটেক সি-চেস্ট ভালভ গ্রিড, ক্যাথোডিক প্রোটেকশন স্যাক্রিফিসিয়াল জিংক অ্যানোড ব্লক ও বিল্জ।',
+    overview: 'ড্রাইডকে অবস্থানরত অবস্থায় জাহাজের তলদেশ, কিল প্লেট, পোর্ট ও স্টারবোর্ড সি-চেস্ট ছাঁকনি, আন্ডারওয়াটার স্যাক্রিফিশিয়াল জিংক অ্যানোড এবং অ্যান্টি-ফাউলিং কোটিং প্রটেকশন।',
     specifications: [
-      { label: 'প্লেট থিকনেস', value: '১২-১৬ মিমি হাই-গ্রেড মেরিন স্টিল' },
-      { label: 'অ্যানোড টাইপ', value: 'হাই-পিওরিটি জিংক স্যাক্রিফিসিয়াল ব্লকস' },
-      { label: 'ড্রাইডক সাইকেল', value: 'প্রতি ১৮-২৪ মাস অন্তর অন্তর' }
+      { label: 'প্লেট স্টিল গ্রেড', value: 'গ্রেড এ নেভাল হাই-টেনসাইল স্টিল (১০-১৪ মিমি)' },
+      { label: 'ক্যাথোডিক অ্যানোড', value: '১২০টি হাই-পিউরিটি জিংক অ্যানোড ব্লক' },
+      { label: 'সি-চেস্ট সংখ্যা', value: '৮টি সাকশন ও কুলিং সি-চেস্ট উইথ গ্রিড' }
     ],
     workshopsAssigned: [
       {
         workshopCode: 'WS-03',
-        workshopNameBn: 'হাল ও স্ট্রাকচারাল শপ',
-        category: 'জাহাজের মূল কাঠামো',
-        oicRankAndName: 'লেফটেন্যান্ট এন চৌধুরী',
-        phoneExt: '৪২০৩',
+        workshopNameBn: 'হাল ও স্ট্রাকচারাল শপ (Hull & Structural Shop)',
+        workshopNameEn: 'Hull & Structural Shop',
+        category: 'Hull Structure',
+        oicRankAndName: 'Lieutenant N Chowdhury',
+        phoneExt: '4203',
         tasks: [
-          'আল্ট্রাসনিক থিকনেস গজ (UTG) টেস্ট দ্বারা হালের প্লেট মেটাল ক্ষয় পরিমাপ।',
-          'ড্রাইডক পিরিয়ডে ক্ষতিগ্রস্থ হাল প্লেট ক্রপ অ্যান্ড রিনিউয়াল ওয়েল্ডিং।'
+          'আন্ডারওয়াটার হাল প্লেট আল্ট্রাসনিক থিকনেস গজ (ইউটিজি) রিডিং ও ড্রাইভ ডকিং মাপজোখ।',
+          'সি-চেস্ট ইনটেক গ্রিল ক্লিনিং, কিল স্ট্রেইটনেস লেভেলিং ও বাল্কহেড স্ট্রেংথ অডিট।'
         ]
       },
       {
-        workshopCode: 'WS-20',
-        workshopNameBn: 'ইলেক্ট্রোপ্লেটিং ও অ্যানোডাইজিং শপ',
-        category: 'সারফেস কেমিস্ট্রি',
-        oicRankAndName: 'লেফটেন্যান্ট এম রফিক',
-        phoneExt: '৪২২০',
+        workshopCode: 'WS-10',
+        workshopNameBn: 'পেইন্টিং ও প্রিজারভেশন শপ (Painting & Preservation Shop)',
+        workshopNameEn: 'Painting & Preservation Shop',
+        category: 'Coating & Protection',
+        oicRankAndName: 'Lieutenant R Ahmed',
+        phoneExt: '4210',
         tasks: [
-          'হাল ও সি-চেস্ট বক্সে ক্যাথোডিক প্রোটেকশন জিংক অ্যানোড ব্লক স্থাপন ও ক্ষয় বিশ্লেষণ।'
-        ]
-      },
-      {
-        workshopCode: 'WS-12',
-        workshopNameBn: 'পেইন্টিং ও স্যান্ডব্লাস্টিং শপ',
-        category: 'সারফেস ফিনিশিং',
-        oicRankAndName: 'লেফটেন্যান্ট এস আহমেদ',
-        phoneExt: '৪২১২',
-        tasks: [
-          'ড্রাইডকে ওয়াটারজেট ব্লাস্টিং ও হাই-গ্রেড অ্যান্টি-ফাউলিং টক্সিক-ফ্রি কোটিং প্রয়োগ।'
+          'তলদেশের বায়ো-ফাউলিং ও বার্নাকল গ্রিট ব্লাস্টিং (SA 2.5) দ্বারা নিখুঁত পরিষ্কার।',
+          'সেলফ-পলিসিং কপার-ফ্রি অ্যান্টি-ফাউলিং কোটিং এবং বুট-টপিং ওয়াটারলাইন পেইন্টিং।'
         ]
       },
       {
         workshopCode: 'WS-22',
-        workshopNameBn: 'আন্ডারওয়াটার রিপেয়ার ও ডাইভিং ইউনিট',
-        category: 'সাব-সি অপারেশন',
-        oicRankAndName: 'লেফটেন্যান্ট কমান্ডার টি মাহমুদ',
-        phoneExt: '৪২২২',
+        workshopNameBn: 'আন্ডারওয়াটার রিপেয়ার ও ডাইভিং ইউনিট (Underwater Repairs & Diving Unit)',
+        workshopNameEn: 'Underwater Repairs & Diving Unit',
+        category: 'Subsea Operations',
+        oicRankAndName: 'Lt Commander T Mahmud',
+        phoneExt: '4222',
         tasks: [
-          'ভাসমান অবস্থায় সি-চেস্ট স্ট্রেইনার গ্রিড আনলকিং ও আন্ডারওয়াটার সিসিটিভি সার্ভে।'
+          'ডাইভার্স পানির নিচে সিসিটিভি ভিডিও ইন্সপেকশন, সি-চেস্ট ক্লিয়ারিং ও ওয়েট ওয়েল্ডিং টেস্ট।'
+        ]
+      },
+      {
+        workshopCode: 'WS-20',
+        workshopNameBn: 'ইলেক্ট্রোপ্লেটিং ও গ্যালভানাইজিং শপ (Electroplating & Galvanizing Shop)',
+        workshopNameEn: 'Electroplating & Galvanizing Shop',
+        category: 'Surface Treatment',
+        oicRankAndName: 'Lieutenant M Rafiq',
+        phoneExt: '4220',
+        tasks: [
+          'স্যাক্রিফিশিয়াল জিংক অ্যানোড ব্লক প্রতিস্থাপন ও আইসিসিপি রেফারেন্স ইলেক্ট্রোড ক্যালিব্রেশন।'
+        ]
+      },
+      {
+        workshopCode: 'WS-15',
+        workshopNameBn: 'শিপরাইট ও কার্পেন্ট্রি শপ (Shipwright & Carpentry Shop)',
+        workshopNameEn: 'Shipwright & Carpentry Shop',
+        category: 'Docking & Woodwork',
+        oicRankAndName: 'Lieutenant N Talukdar',
+        phoneExt: '4215',
+        tasks: [
+          'ড্রাইডক কিল ব্লক ও বিল্জ ব্লক টিম্বার পজিশনিং ও আন্ডারওয়াটার ডকিং প্লাগ চেক।'
+        ]
+      },
+      {
+        workshopCode: 'WS-25',
+        workshopNameBn: 'কোয়ালিটি কন্ট্রোল ও এনডিটি ল্যাব (Quality Control & NDT Lab)',
+        workshopNameEn: 'Quality Control & NDT Lab',
+        category: 'Quality Assurance',
+        oicRankAndName: 'Lt Commander M K Chowdhury',
+        phoneExt: '4225',
+        tasks: [
+          'তলদেশের ওয়েল্ডিং সীমে ম্যাগনেটিক পার্টিকেল ইন্সপেকশন (MPI) ও হাল প্লেট এক্স-রে।'
         ]
       }
     ]
