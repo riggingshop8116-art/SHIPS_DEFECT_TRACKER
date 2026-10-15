@@ -29,13 +29,15 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
   {
     id: 'ws-01',
     code: 'WS-01',
-    nameBn: 'Rigging Shop',
+    nameBn: 'রিগিং শপ',
     nameEn: 'Rigging Shop',
     category: 'Deck & Lifting Gear',
-    oicRank: 'SAKIB HOSEN',
-    oicName: 'OFFICE WRITER',
+    oicRank: 'Office Writer',
+    oicName: 'Sakib Hosen',
     phoneExt: '8116',
     status: 'active',
+    username: 'oic.ws01',
+    password: '123456',
     description: 'Repair and testing of ship cables, wire ropes, cranes, and hoisting equipment.'
   },
   {
@@ -373,23 +375,29 @@ export const DEFAULT_SHIPS = [
 ];
 
 export const DEFAULT_LOCATIONS = [
+  'Bow & Anchor Windlass Station',
+  'Forecastle & 76mm Naval Gun',
+  'Bridge & Wheelhouse',
+  'Radar Mast',
+  'Combat Information Center (CIC) & Sonar Suite',
+  'Midship Anti-Ship Missile Launchers & Torpedo Deck',
   'Main Engine',
   'Diesel Generator 1 (DG-1)',
   'Diesel Generator 2 (DG-2)',
   'Auxiliary Boiler',
-  'Steering Gear Room',
-  'Reverse Osmosis Plant (RO Plant)',
-  'AC Chiller & Cooling Plant',
+  'AC Chiller & Fresh Water Plant',
+  'Flight Deck & Quarter Deck',
+  'Steering Gear & Propellers',
+  'Hull, Keel & Underwater Hull',
   'Gangway',
-  'Port & Stbd',
-  'Quarter Deck'
+  'Port & Stbd'
 ];
 
 export const DEFAULT_PROFILE: UserProfile = {
   name: 'Lt Commander M. A. Rahman',
   rank: 'Engineer Officer (Marine Engineer)',
-  officialId: 'P. No - 1947',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+  officialId: 'admin',
+  avatar: '/anchor.jpg',
   role: 'admin',
   password: 'admin123'
 };

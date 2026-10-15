@@ -94,12 +94,12 @@ export const LOCATION_COMPARTMENT_MAP: Record<string, string[]> = {
   // SEC-01: Bow & Anchor Windlass Station
   'sec-01': [
     'gangway', 'গ্যাংওয়ে', 'bow', 'windlass', 'anchor', 'বো', 'উইন্ডলাস', 'নোঙর', 
-    'forecastle', 'ফোরক্যাসল', 'hawse', 'হস পাইপ', 'mooring capstan', 'ম্যুরিং', 'চেইন লকার'
+    'hawse', 'হস পাইপ', 'mooring capstan', 'ম্যুরিং', 'চেইন লকার', 'forecastle windlass', 'forecastle anchor'
   ],
   // SEC-02: Forecastle 76mm Main Naval Gun Turret
   'sec-02': [
     'gun', 'naval gun', '76mm', 'কামান', 'গান', 'নেভাল গান', 'গান মাউন্ট', 'turret', 
-    'আর্টিলারি', 'artillery', 'ammunition hoist', 'বো মাউন্ট'
+    'আর্টিলারি', 'artillery', 'ammunition hoist', 'বো মাউন্ট', 'forecastle gun', 'forecastle & 76mm'
   ],
   // SEC-03: Bridge & Wheelhouse (Naval Command Center)
   'sec-03': [
@@ -131,12 +131,12 @@ export const LOCATION_COMPARTMENT_MAP: Record<string, string[]> = {
   'sec-08': [
     'generator', 'dg', 'dg-1', 'dg-2', 'diesel generator', 'ডিজি', 'ডিজি-১', 'ডিজি-২', 
     'জেনারেটর', 'switchboard', 'সুইচবোর্ড', 'পাওয়ার জেনারেশন', 'auxiliary machinery', 
-    'ডিজেল জেনারেটর', 'dg room'
+    'ডিজেল জেনারেটর', 'dg room', 'aux boiler', 'boiler room'
   ],
   // SEC-09: Chiller, Auxiliary Boiler & Technical Plants
   'sec-09': [
-    'chiller', 'ac', 'cooling', 'boiler', 'ro plant', 'চিলার', 'এসি', 'বয়লার', 
-    'রেফ্রিজারেশন', 'ac chiller', 'হিমায়ন', 'ওয়াটার প্ল্যান্ট', 'auxiliary boiler'
+    'chiller', 'ac', 'cooling', 'ro plant', 'চিলার', 'এসি', 
+    'রেফ্রিজারেশন', 'ac chiller', 'হিমায়ন', 'ওয়াটার প্ল্যান্ট', 'fresh water plant'
   ],
   // SEC-10: Helideck & Flight Deck Operations
   'sec-10': [
@@ -173,10 +173,48 @@ export const matchLocationToCompartment = (
     return true;
   }
 
-  // 2. Direct location tag or name match
+  // 2. High-priority weapon and machinery domain rules to prevent false cross-matching
+  if (locNorm.includes('76mm') || locNorm.includes('naval gun') || locNorm.includes('gun mount')) {
+    return compId === 'sec-02';
+  }
+  if (locNorm.includes('diesel generator') || locNorm.includes('dg-1') || locNorm.includes('dg-2')) {
+    return compId === 'sec-08';
+  }
+  if (locNorm.includes('main engine') || locNorm.includes('propulsion room')) {
+    return compId === 'sec-07';
+  }
+  if (locNorm.includes('chiller') || locNorm.includes('ro plant') || locNorm.includes('fresh water')) {
+    return compId === 'sec-09';
+  }
+  if (locNorm.includes('steering') || locNorm.includes('rudder')) {
+    return compId === 'sec-11';
+  }
+  if (locNorm.includes('flight deck') || locNorm.includes('helipad') || locNorm.includes('quarter deck')) {
+    return compId === 'sec-10';
+  }
+  if (locNorm.includes('missile') || locNorm.includes('torpedo')) {
+    return compId === 'sec-06';
+  }
+  if (locNorm.includes('radar') || locNorm.includes('mast')) {
+    return compId === 'sec-04';
+  }
+  if (locNorm.includes('bridge') || locNorm.includes('wheelhouse')) {
+    return compId === 'sec-03';
+  }
+  if (locNorm.includes('cic') || locNorm.includes('sonar')) {
+    return compId === 'sec-05';
+  }
+  if (locNorm.includes('windlass') || locNorm.includes('gangway') || locNorm.includes('chain locker')) {
+    return compId === 'sec-01';
+  }
+  if (locNorm.includes('hull') || locNorm.includes('underwater') || locNorm.includes('sea chest')) {
+    return compId === 'sec-12';
+  }
+
+  // 3. Direct location tag or name match
   if (compartment.locationTag) {
     const tagNorm = compartment.locationTag.toLowerCase();
-    if (tagNorm.includes(locNorm) || locNorm.includes(tagNorm)) return true;
+    if (tagNorm === locNorm || tagNorm.includes(locNorm) || locNorm.includes(tagNorm)) return true;
   }
   if (compartment.nameEn && (compartment.nameEn.toLowerCase().includes(locNorm) || locNorm.includes(compartment.nameEn.toLowerCase()))) {
     return true;
@@ -185,7 +223,7 @@ export const matchLocationToCompartment = (
     return true;
   }
 
-  // 3. Synonym dictionary matching
+  // 4. Synonym dictionary matching
   const synonyms = LOCATION_COMPARTMENT_MAP[compId] || [];
   return synonyms.some(syn => locNorm.includes(syn) || syn.includes(locNorm));
 };
@@ -194,14 +232,14 @@ export const matchLocationToCompartment = (
  * Aliases and multilingual keywords for each of the 27 Dockyard workshops.
  */
 export const WORKSHOP_ALIASES: Record<string, string[]> = {
-  'WS-01': ['WS-01', 'RIGGING', 'রিগিং', 'LIFTING', 'CABLE', 'ROPE', 'DOCKING', 'SAKIB', 'স্কেফোল্ডিং'],
+  'WS-01': ['WS-01', 'RIGGING', 'রিগিং', 'LIFTING', 'CABLE', 'ROPE', 'DOCKING', 'SAKIB', 'স্কেফোল্ডিং', 'GUARD RAIL', 'WIRE ROPE'],
   'WS-02': ['WS-02', 'MACHINE', 'মেশিন', 'LATHE', 'MACHINING', 'লেদ', 'টার্নিং', 'মিলিং', 'MILLING', 'BORING'],
   'WS-03': ['WS-03', 'HULL', 'STRUCTURAL', 'হাল', 'স্ট্রাকচারাল', 'কাঠামো', 'PLATING', 'প্লেটিং'],
   'WS-04': ['WS-04', 'WELDING', 'FABRICATION', 'ওয়েল্ডিং', 'ফেব্রিকেশন', 'TIG', 'MIG'],
   'WS-05': ['WS-05', 'ELECTRICAL', 'ইলেকট্রিক্যাল', 'POWER', 'বিদ্যুৎ', 'SWITCHBOARD', 'GENERATOR', 'মোটর'],
   'WS-06': ['WS-06', 'ELECTRONICS', 'RADAR', 'ইলেকট্রনিক্স', 'রাডার', 'SONAR', 'সোনার'],
   'WS-07': ['WS-07', 'WEAPON', 'ORDNANCE', 'ওয়েপন', 'আর্মামেন্ট', 'কামান', 'মিসাইল', 'GUN', 'MISSILE', 'অর্ডন্যান্স'],
-  'WS-08': ['WS-08', 'IC ENGINE', 'DIESEL', 'আইসি ইঞ্জিন', 'ডিজেল', 'PROPULSION'],
+  'WS-08': ['WS-08', 'IC ENGINE', 'DIESEL', 'আইসি ইঞ্জিন', 'ডিজেল', 'PROPULSION DIESEL'],
   'WS-09': ['WS-09', 'PIPE', 'PLUMBING', 'পাইপ', 'প্লাম্বিং', 'VALVE', 'ভালভ'],
   'WS-10': ['WS-10', 'PAINT', 'PAINTING', 'PRESERVATION', 'পেইন্ট', 'পেইন্টিং', 'রং', 'সংরক্ষণ', 'BLASTING', 'COATING', 'ANTI-FOULING', 'ব্লাস্টিং', 'কোটিং', 'প্রিজারভেশন'],
   'WS-11': ['WS-11', 'BOILER', 'STEAM', 'বয়লার', 'স্টিম', 'CALORIFIER'],
@@ -209,7 +247,7 @@ export const WORKSHOP_ALIASES: Record<string, string[]> = {
   'WS-13': ['WS-13', 'SAIL LOFT', 'SURVIVAL', 'সেইল লফট', 'সারভাইভাল', 'LIFE RAFT', 'লাইফ র‍্যাফট', 'CANOPY'],
   'WS-14': ['WS-14', 'FOUNDRY', 'CASTING', 'ফাউন্ড্রি', 'কাস্টিং', 'METAL CASTING', 'মেটাল কাস্টিং', 'BRONZE', 'ব্রোঞ্জ'],
   'WS-15': ['WS-15', 'SHIPWRIGHT', 'CARPENTRY', 'শিপরাইট', 'কার্পেন্ট্রি', 'WOODWORK', 'উডওয়ার্ক', 'ডকিং'],
-  'WS-16': ['WS-16', 'TOOL ROOM', 'TOOLING', 'PRECISION', 'টুল রুম', 'প্রিসিশন শপ', 'GAUGE', 'গেজ'],
+  'WS-16': ['WS-16', 'TOOL ROOM', 'TOOLING', 'PRECISION SHOP', 'টুল রুম', 'প্রিসিশন শপ', 'GAUGE', 'গেজ'],
   'WS-17': ['WS-17', 'OPTICAL', 'FIRE CONTROL', 'অপটিক্যাল', 'ফায়ার কন্ট্রোল', 'DIRECTOR', 'RANGEFINDER', 'রেঞ্জফাইন্ডার'],
   'WS-18': ['WS-18', 'REFRIGERATION', 'HVAC', 'CHILLER', 'রেফ্রিজারেশন', 'এইচভিএসি', 'এসি', 'চিলার', 'কুলিং'],
   'WS-19': ['WS-19', 'HYDRAULIC', 'PNEUMATIC', 'হাইড্রোলিক', 'নিউমেটিক', 'FLUID POWER'],
@@ -236,13 +274,11 @@ export const isDefectForWorkshop = (defect: Defect, ws: Workshop | string | null
   const defWsCode = (defect.workshopCode || '').trim().toUpperCase();
   const defWsText = (defect.workshop || '').trim().toUpperCase();
 
-  // 1. Authoritative explicit workshopCode check
+  // 1. Authoritative explicit workshopCode check (WS-01 to WS-27)
   if (defWsCode) {
     if (defWsCode === target) {
       return true;
     }
-    // If the defect explicitly specifies a known workshop code (WS-01 to WS-27),
-    // and target is also a workshop code, it belongs to that other workshop!
     const isDefWsCodePattern = /^WS-\d{2}$/i.test(defWsCode);
     const isTargetWsCodePattern = /^WS-\d{2}$/i.test(target);
     if (isDefWsCodePattern && isTargetWsCodePattern) {
@@ -257,7 +293,7 @@ export const isDefectForWorkshop = (defect: Defect, ws: Workshop | string | null
     if (ws.code && defWsCode === ws.code.toUpperCase()) return true;
   }
 
-  // 3. Normalized alias matching
+  // 3. If defect explicitly specifies a different WS code, do NOT match via text
   let wsKey = target;
   if (!WORKSHOP_ALIASES[wsKey]) {
     for (const [code, aliases] of Object.entries(WORKSHOP_ALIASES)) {
@@ -268,6 +304,10 @@ export const isDefectForWorkshop = (defect: Defect, ws: Workshop | string | null
     }
   }
 
+  if (defWsCode && /^WS-\d{2}$/i.test(defWsCode) && defWsCode !== wsKey) {
+    return false;
+  }
+
   const aliases = WORKSHOP_ALIASES[wsKey] || [target];
 
   // Match defect.workshopCode against target aliases
@@ -275,16 +315,17 @@ export const isDefectForWorkshop = (defect: Defect, ws: Workshop | string | null
     return true;
   }
 
-  // Match defect.workshop text against target aliases (only if no conflicting workshopCode exists)
+  // Match defect.workshop text against target aliases
   if (defWsText) {
-    // If defect has an explicit workshopCode for another WS, do not match via text
-    if (defWsCode && /^WS-\d{2}$/i.test(defWsCode) && defWsCode !== wsKey) {
-      return false;
-    }
-
     for (const alias of aliases) {
-      if (alias.length <= 2) continue; // skip short acronyms for substring search
-      if (defWsText === alias || defWsText.includes(alias)) {
+      if (alias.length <= 2) continue;
+      if (defWsText === alias) {
+        return true;
+      }
+      // Word boundary regex check to avoid accidental substring matches
+      const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(^|\\b|\\s)${escaped}(\\b|\\s|$)`, 'i');
+      if (regex.test(defWsText)) {
         return true;
       }
     }
@@ -317,11 +358,14 @@ export interface LocationWorkGroup {
   pendingCount: number;
   solvedCount: number;
   hasActiveSignal: boolean;
+  isRoutineStation?: boolean;
+  stationTasks?: string[];
 }
 
 /**
  * Groups works/defects on a ship for a specific workshop by location.
- * Enables showing exact ship locations under that shop with active work signals.
+ * Accurately analyzes naval locations assigned to this workshop (e.g. Rigging Shop => wire ropes, guard rails, cranes)
+ * and displays active signals and tasks strictly for this shop.
  */
 export const getShopLocationsOnShip = (
   shipName: string,
@@ -329,42 +373,83 @@ export const getShopLocationsOnShip = (
   defects: Defect[],
   compartments: ShipCompartment[]
 ): LocationWorkGroup[] => {
-  // 1. Filter defects belonging to this ship and workshop
+  if (!ws) return [];
+  const targetCode = typeof ws === 'string' ? ws.trim().toUpperCase() : ws.code.trim().toUpperCase();
+
+  // 1. Filter defects belonging to this ship and this workshop
   const shipWsDefects = defects.filter(d => 
     isSameShip(d.shipName, shipName) && isDefectForWorkshop(d, ws)
   );
 
-  // 2. Group defects by location
-  const locationMap = new Map<string, Defect[]>();
-  shipWsDefects.forEach(d => {
-    const loc = (d.location || 'General Station').trim();
-    if (!locationMap.has(loc)) {
-      locationMap.set(loc, []);
-    }
-    locationMap.get(loc)!.push(d);
-  });
+  // 2. Identify all designated compartments on the warship assigned to this workshop
+  const designatedComps = compartments.filter(c => 
+    c.workshopsAssigned.some(a => a.workshopCode.toUpperCase() === targetCode)
+  );
 
-  // 3. For each location, find matching compartment
   const groups: LocationWorkGroup[] = [];
-  locationMap.forEach((locDefects, locName) => {
-    const matchedComp = compartments.find(c => matchLocationToCompartment(locName, c)) || compartments[0];
-    const pendingCount = locDefects.filter(d => d.status === 'Pending').length;
-    const solvedCount = locDefects.filter(d => d.status === 'Solved').length;
+  const handledCompIds = new Set<string>();
+
+  // 3. For each designated compartment, group defects and routine tasks
+  designatedComps.forEach(comp => {
+    handledCompIds.add(comp.id);
+    const assignedTaskObj = comp.workshopsAssigned.find(a => a.workshopCode.toUpperCase() === targetCode);
+    const compDefects = shipWsDefects.filter(d => matchLocationToCompartment(d.location, comp));
+    const pendingCount = compDefects.filter(d => d.status === 'Pending').length;
+    const solvedCount = compDefects.filter(d => d.status === 'Solved').length;
 
     groups.push({
-      location: locName,
-      compartmentId: matchedComp.id,
-      compartmentCode: matchedComp.code,
-      compartmentNameEn: matchedComp.nameEn,
-      compartmentNameBn: matchedComp.nameBn,
-      defects: locDefects,
+      location: comp.locationTag || comp.nameEn,
+      compartmentId: comp.id,
+      compartmentCode: comp.code,
+      compartmentNameEn: comp.nameEn,
+      compartmentNameBn: comp.nameBn,
+      defects: compDefects,
       pendingCount,
       solvedCount,
-      hasActiveSignal: pendingCount > 0
+      hasActiveSignal: pendingCount > 0,
+      isRoutineStation: true,
+      stationTasks: assignedTaskObj?.tasks || []
     });
   });
 
-  // Sort: locations with pending defects first, then by total defects
+  // 4. Also check if there are additional defects logged under non-standard location tags
+  const remainingDefects = shipWsDefects.filter(d => {
+    return !designatedComps.some(comp => matchLocationToCompartment(d.location, comp));
+  });
+
+  const extraLocMap = new Map<string, Defect[]>();
+  remainingDefects.forEach(d => {
+    const loc = (d.location || 'General Station').trim();
+    if (!extraLocMap.has(loc)) extraLocMap.set(loc, []);
+    extraLocMap.get(loc)!.push(d);
+  });
+
+  extraLocMap.forEach((locDefs, locName) => {
+    const matchedComp = compartments.find(c => matchLocationToCompartment(locName, c));
+    if (matchedComp) {
+      // Strict naval trade boundary: Machine Shop (WS-02) does not handle SEC-08 Diesel Generators or Aux Boilers
+      if (targetCode === 'WS-02' && matchedComp.id === 'sec-08') {
+        return;
+      }
+      const pendingCount = locDefs.filter(d => d.status === 'Pending').length;
+      const solvedCount = locDefs.filter(d => d.status === 'Solved').length;
+      groups.push({
+        location: locName,
+        compartmentId: matchedComp.id,
+        compartmentCode: matchedComp.code,
+        compartmentNameEn: matchedComp.nameEn,
+        compartmentNameBn: matchedComp.nameBn,
+        defects: locDefs,
+        pendingCount,
+        solvedCount,
+        hasActiveSignal: pendingCount > 0,
+        isRoutineStation: false,
+        stationTasks: []
+      });
+    }
+  });
+
+  // Sort: locations with active pending defects first, then by total defects
   return groups.sort((a, b) => b.pendingCount - a.pendingCount || b.defects.length - a.defects.length);
 };
 

@@ -164,6 +164,9 @@ export default function Ship3DViewer({
       compDefects.forEach(d => {
         const live = workshops.find(w => isDefectForWorkshop(d, w));
         if (live) {
+          // Strict naval role guard: Machine Shop (WS-02) does not handle SEC-08 Diesel Generators/Boilers
+          if (live.code.toUpperCase() === 'WS-02' && comp.id === 'sec-08') return;
+
           const alreadyIndex = updatedAssigned.findIndex(a => a.workshopCode.toUpperCase() === live.code.toUpperCase());
           const defectTask = d.defectDescription || `${d.location}-এ মেরামত ও সমাধান কার্যক্রম`;
           if (alreadyIndex >= 0) {
@@ -210,12 +213,14 @@ export default function Ship3DViewer({
 
     // 1. Direct defects on THIS ship where this workshop has work at this compartment
     const compartmentsWithShipWork = dynamicCompartments.filter(c => {
+      if (targetCode === 'WS-02' && c.id === 'sec-08') return false;
       const compDefs = getCompartmentDefects(c);
       return compDefs.some(d => isDefectForWorkshop(d, selectedWorkshopObj || targetCode));
     }).map(c => c.id);
 
     // 2. Designated routine maintenance compartments for this workshop
     const routineStationIds = dynamicCompartments.filter(c => {
+      if (targetCode === 'WS-02' && c.id === 'sec-08') return false;
       return c.workshopsAssigned.some(w => {
         const wCode = w.workshopCode.toUpperCase();
         return wCode === targetCode || (selectedWorkshopObj && wCode === selectedWorkshopObj.code.toUpperCase());

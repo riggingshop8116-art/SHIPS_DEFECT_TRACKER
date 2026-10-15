@@ -45,10 +45,12 @@ import { supabase } from './lib/supabase';
 import { supabaseService, mapDefectFromDb } from './services/supabaseService';
 
 export default function App() {
-  // Authentication session
+  // Authentication session (using sessionStorage so closing the tab or window automatically logs out)
   const [authSession, setAuthSession] = useState<AuthSession | null>(() => {
     try {
-      const stored = localStorage.getItem('defect_tracker_auth');
+      // Clear legacy localStorage auth so returning users always land on the login page
+      localStorage.removeItem('defect_tracker_auth');
+      const stored = sessionStorage.getItem('defect_tracker_auth');
       return stored ? JSON.parse(stored) : null;
     } catch (e) {
       return null;
@@ -86,7 +88,15 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile>(() => {
     try {
       const stored = localStorage.getItem('defect_tracker_profile');
-      return stored ? JSON.parse(stored) : DEFAULT_PROFILE;
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Ensure Admin profile is never corrupted with Shop 1 credentials
+        if (parsed.name?.toLowerCase().includes('sakib') || parsed.officialId === '8116') {
+          return DEFAULT_PROFILE;
+        }
+        return parsed;
+      }
+      return DEFAULT_PROFILE;
     } catch (e) {
       return DEFAULT_PROFILE;
     }
@@ -111,7 +121,25 @@ export default function App() {
   const [workshops, setWorkshops] = useState<Workshop[]>(() => {
     try {
       const stored = localStorage.getItem('defect_tracker_workshops');
-      return stored ? JSON.parse(stored) : DEFAULT_WORKSHOPS;
+      let list: Workshop[] = stored ? JSON.parse(stored) : DEFAULT_WORKSHOPS;
+      // Strictly guarantee Shop 1 is always Rigging Shop (রিগিং শপ)
+      list = list.map(ws => {
+        if (ws.id === 'ws-01' || ws.code === 'WS-01') {
+          return {
+            ...ws,
+            id: 'ws-01',
+            code: 'WS-01',
+            nameEn: ws.nameEn && !ws.nameEn.toLowerCase().includes('admin') ? ws.nameEn : 'Rigging Shop',
+            nameBn: ws.nameBn && !ws.nameBn.includes('এডমিন') ? ws.nameBn : 'রিগিং শপ',
+            category: 'Deck & Lifting Gear',
+            description: 'Repair and testing of ship cables, wire ropes, cranes, and hoisting equipment.',
+            username: ws.username || 'oic.ws01',
+            password: ws.password || '123456'
+          };
+        }
+        return ws;
+      });
+      return list;
     } catch (e) {
       return DEFAULT_WORKSHOPS;
     }
@@ -622,8 +650,17 @@ export default function App() {
     try {
       const stored = localStorage.getItem('defect_tracker_defects');
       if (stored) {
-        const parsed = JSON.parse(stored);
+        let parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
+          // Sanitize: Strictly fix any legacy test defect where Machine Shop was attached to Diesel Generators
+          parsed = parsed.map((d: Defect) => {
+            const isWs02 = d.workshopCode === 'WS-02' || (d.workshop && d.workshop.toLowerCase().includes('machine'));
+            const isDgLocation = d.location && (d.location.toLowerCase().includes('generator') || d.location.toLowerCase().includes('dg-') || d.location.toLowerCase().includes('boiler'));
+            if (isWs02 && isDgLocation) {
+              return { ...d, location: 'Main Engine' };
+            }
+            return d;
+          });
           const existingIds = new Set(parsed.map((d: Defect) => d.id));
           const missingSeeds = defaultSeedDefects.filter(d => !existingIds.has(d.id));
           if (missingSeeds.length > 0) {
@@ -760,8 +797,24 @@ export default function App() {
       }
 
       if (remoteWorkshops && remoteWorkshops.length > 0) {
-        setWorkshops(remoteWorkshops);
-        localStorage.setItem('defect_tracker_workshops', JSON.stringify(remoteWorkshops));
+        const sanitizedWs = remoteWorkshops.map((ws: Workshop) => {
+          if (ws.id === 'ws-01' || ws.code === 'WS-01') {
+            return {
+              ...ws,
+              id: 'ws-01',
+              code: 'WS-01',
+              nameEn: ws.nameEn && !ws.nameEn.toLowerCase().includes('admin') ? ws.nameEn : 'Rigging Shop',
+              nameBn: ws.nameBn && !ws.nameBn.includes('এডমিন') ? ws.nameBn : 'রিগিং শপ',
+              category: 'Deck & Lifting Gear',
+              description: ws.description || 'Repair and testing of ship cables, wire ropes, cranes, and hoisting equipment.',
+              username: ws.username || 'oic.ws01',
+              password: ws.password || '123456'
+            };
+          }
+          return ws;
+        });
+        setWorkshops(sanitizedWs);
+        localStorage.setItem('defect_tracker_workshops', JSON.stringify(sanitizedWs));
       } else if (remoteWorkshops && remoteWorkshops.length === 0 && workshops.length > 0) {
         // Auto-seed existing workshops to Supabase
         supabaseService.syncAllWorkshops(workshops);
@@ -789,8 +842,21 @@ export default function App() {
       }
 
       if (remoteProfile) {
-        setProfile(remoteProfile);
-        localStorage.setItem('defect_tracker_profile', JSON.stringify(remoteProfile));
+        // Ensure Admin Profile is strictly isolated from Shop 1 (Sakib Hosen / Rigging Shop)
+        const sanitizedProfile: UserProfile = {
+          ...remoteProfile,
+          role: 'admin',
+          officialId: remoteProfile.officialId || 'admin',
+          password: remoteProfile.password || 'admin123'
+        };
+        if (sanitizedProfile.name?.toLowerCase().includes('sakib') || sanitizedProfile.officialId === '8116') {
+          sanitizedProfile.name = 'Lt Commander M. A. Rahman';
+          sanitizedProfile.rank = 'Engineer Officer (Marine Engineer)';
+          sanitizedProfile.officialId = 'admin';
+          sanitizedProfile.avatar = '/anchor.jpg';
+        }
+        setProfile(sanitizedProfile);
+        localStorage.setItem('defect_tracker_profile', JSON.stringify(sanitizedProfile));
       } else {
         supabaseService.saveUserProfile(profile);
       }
@@ -1003,10 +1069,11 @@ export default function App() {
   };
 
 
-  // Auth operations
+  // Auth operations (sessionStorage ensures that leaving/closing automatically logs out the user)
   const handleLoginSuccess = (session: AuthSession) => {
     setAuthSession(session);
-    localStorage.setItem('defect_tracker_auth', JSON.stringify(session));
+    sessionStorage.setItem('defect_tracker_auth', JSON.stringify(session));
+    localStorage.removeItem('defect_tracker_auth');
     // Admin login automatically opens Admin Control Center; Workshop opens Dashboard
     if (session.role === 'admin') {
       setActiveTab('admin');
@@ -1024,6 +1091,20 @@ export default function App() {
     }
   }, [authSession, activeTab]);
 
+  // Automatic logout when user closes the window/tab or navigates away without explicit logout
+  useEffect(() => {
+    const handleUnload = () => {
+      sessionStorage.removeItem('defect_tracker_auth');
+      localStorage.removeItem('defect_tracker_auth');
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
+    };
+  }, []);
+
   // In-app Logout Modal State (Immune to browser iframe popup blocking)
   const [showLogoutModal, setShowLogoutModal] = useState<boolean>(false);
   // User Profile & Photo Edit Modal
@@ -1035,58 +1116,72 @@ export default function App() {
 
   const handleConfirmLogout = () => {
     setAuthSession(null);
+    sessionStorage.removeItem('defect_tracker_auth');
     localStorage.removeItem('defect_tracker_auth');
     setShowLogoutModal(false);
   };
 
   const handleSaveProfileModal = async (newProfile: UserProfile, newOfficerName?: string, newRank?: string, newPhone?: string) => {
-    setProfile(newProfile);
-    localStorage.setItem('defect_tracker_profile', JSON.stringify(newProfile));
+    const isWorkshopUser = authSession && authSession.role === 'workshop_user';
 
-    if (authSession) {
+    if (isWorkshopUser && authSession.workshopId) {
+      // 1. Strictly isolate workshop user update: update ONLY this specific workshop
+      const photoUrl = newProfile.avatar;
       const updatedSession: AuthSession = {
         ...authSession,
         officerName: newOfficerName || authSession.officerName,
         officerRank: newRank || authSession.officerRank,
-        photo: newProfile.avatar || authSession.photo
+        photo: photoUrl
       };
       setAuthSession(updatedSession);
-      localStorage.setItem('defect_tracker_auth', JSON.stringify(updatedSession));
+      sessionStorage.setItem('defect_tracker_auth', JSON.stringify(updatedSession));
 
-      // If logged in as a workshop user, update the workshop data in the master workshops state
-      if (authSession.workshopId) {
-        let updatedWs: Workshop | null = null;
-        const updatedWorkshops = workshops.map(ws => {
-          if (ws.id === authSession.workshopId) {
-            updatedWs = {
-              ...ws,
-              oicName: newOfficerName || ws.oicName,
-              oicRank: newRank || ws.oicRank,
-              phoneExt: newPhone || ws.phoneExt,
-              photo: newProfile.avatar || ws.photo
-            };
-            return updatedWs;
-          }
-          return ws;
-        });
+      let updatedWs: Workshop | null = null;
+      const updatedWorkshops = workshops.map(ws => {
+        if (ws.id === authSession.workshopId || ws.code === authSession.workshopCode) {
+          updatedWs = {
+            ...ws,
+            oicName: newOfficerName || ws.oicName,
+            oicRank: newRank || ws.oicRank,
+            phoneExt: newPhone || ws.phoneExt,
+            photo: photoUrl
+          };
+          return updatedWs;
+        }
+        return ws;
+      });
 
-        setWorkshops(updatedWorkshops);
-        localStorage.setItem('defect_tracker_workshops', JSON.stringify(updatedWorkshops));
+      setWorkshops(updatedWorkshops);
+      localStorage.setItem('defect_tracker_workshops', JSON.stringify(updatedWorkshops));
 
-        if (updatedWs) {
-          try {
-            await supabaseService.upsertWorkshop(updatedWs);
-          } catch (err) {
-            console.warn('Failed to upsert workshop profile to Supabase', err);
-          }
+      if (updatedWs) {
+        try {
+          await supabaseService.upsertWorkshop(updatedWs);
+        } catch (err) {
+          console.warn('Failed to upsert workshop profile to Supabase', err);
         }
       }
-    }
+    } else {
+      // 2. HQ Admin profile update
+      setProfile(newProfile);
+      localStorage.setItem('defect_tracker_profile', JSON.stringify(newProfile));
 
-    try {
-      await supabaseService.saveUserProfile(newProfile);
-    } catch (err) {
-      console.warn('Failed to save user profile to Supabase', err);
+      if (authSession) {
+        const updatedSession: AuthSession = {
+          ...authSession,
+          officerName: newOfficerName || authSession.officerName,
+          officerRank: newRank || authSession.officerRank,
+          photo: newProfile.avatar || authSession.photo
+        };
+        setAuthSession(updatedSession);
+        sessionStorage.setItem('defect_tracker_auth', JSON.stringify(updatedSession));
+      }
+
+      try {
+        await supabaseService.saveUserProfile(newProfile);
+      } catch (err) {
+        console.warn('Failed to save user profile to Supabase', err);
+      }
     }
   };
 

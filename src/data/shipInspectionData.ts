@@ -476,6 +476,18 @@ export const WARSHIP_COMPARTMENTS: ShipCompartment[] = [
     ],
     workshopsAssigned: [
       {
+        workshopCode: 'WS-01',
+        workshopNameBn: 'রিগিং শপ (Rigging Shop)',
+        workshopNameEn: 'Rigging Shop',
+        category: 'Deck & Lifting Gear',
+        oicRankAndName: 'SAKIB HOSEN (OFFICE WRITER)',
+        phoneExt: '8116',
+        tasks: [
+          'মিডশিপ ওয়েদার ডেক সেফটি গার্ড রেইল, পেডেস্টাল স্ট্যাঞ্চিয়ন ও ড্রপ চেইন ইন্সপেকশন ও টাইটনিং।',
+          'টর্পেডো হ্যান্ডলিং ক্রেন ওয়্যার রোপ, সুইভেল হুক ও হোস্টিং শেকল প্রুফ লোড টেস্টিং।'
+        ]
+      },
+      {
         workshopCode: 'WS-07',
         workshopNameBn: 'ওয়েপন ও অর্ডন্যান্স শপ (Weapon & Ordnance Shop)',
         workshopNameEn: 'Weapon & Ordnance Shop',
@@ -721,6 +733,17 @@ export const WARSHIP_COMPARTMENTS: ShipCompartment[] = [
         tasks: [
           'বয়লার ফিড ওয়াটার পাম্প ব্রোঞ্জ ইম্পেলার ও কাস্ট আয়রন পাইপ ফ্ল্যাঞ্জ কাস্টিং সার্ভিসিং।'
         ]
+      },
+      {
+        workshopCode: 'WS-24',
+        workshopNameBn: 'ক্যালিব্রেশন ও ইনস্ট্রুমেন্টেশন ল্যাব (Calibration & Instrumentation Lab)',
+        workshopNameEn: 'Calibration & Instrumentation Lab',
+        category: 'Testing & Standards',
+        oicRankAndName: 'Lieutenant J Islam',
+        phoneExt: '4224',
+        tasks: [
+          'অক্সিলারি বয়লার স্টিম প্রেশার ট্র্যান্সমিটার ও ডিজি কুলিং ওয়াটার টেম্পারেচার সেন্সর ক্যালিব্রেশন।'
+        ]
       }
     ]
   },
@@ -839,8 +862,9 @@ export const WARSHIP_COMPARTMENTS: ShipCompartment[] = [
         oicRankAndName: 'SAKIB HOSEN (OFFICE WRITER)',
         phoneExt: '8116',
         tasks: [
-          'হেলিকপ্টার টাই-ডাউন ল্যাশিং চেইন ও কুইক রিলিজ পেলিক্যান হুক প্রুফ টেস্ট।',
-          'ফ্লাইট ডেক পেরিমিটার সেফটি ড্রপ-নেট কেবলস ও হ্যাঙ্গার ওভারহেড হোইস্ট ওয়্যার চেক।'
+          'ফ্লাইট ডেক ও হেলিপ্যাড পেরিমিটার সেফটি ড্রপ-নেট কেবলস ও হ্যাঙ্গার ওভারহেড হোইস্ট ওয়্যার চেক।',
+          'কোয়ার্টার ডেক সেফটি গার্ড রেইল, পেডেস্টাল স্ট্যাঞ্চিয়ন ও বোট ডেভিট ফলস ওয়্যার রোপ ইন্সপেকশন।',
+          'হেলিকপ্টার টাই-ডাউন ল্যাশিং চেইন ও কুইক রিলিজ পেলিক্যান হুক প্রুফ টেস্ট।'
         ]
       },
       {

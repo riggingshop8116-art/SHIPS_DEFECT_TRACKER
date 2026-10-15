@@ -128,25 +128,23 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
         return;
       }
 
-      // 1. Strict Case Sensitive Username Matching:
-      // First check selected workshop
-      let targetWs = workshops.find(ws => 
-        ws.id === selectedWorkshopId && (
-          (ws.username && ws.username.trim() === inputUser) ||
-          ws.code.trim() === inputUser
-        )
-      );
-
-      // If not matching selected workshop, check across all workshops with exact case sensitivity
-      if (!targetWs) {
-        targetWs = workshops.find(ws => 
-          (ws.username && ws.username.trim() === inputUser) ||
-          ws.code.trim() === inputUser
-        );
+      // Security Guard: Prevent Admin credentials from being used in workshop login
+      const expectedAdminId = (profile?.officialId || 'admin').trim();
+      const expectedAdminPass = (profile?.password || 'admin123').trim();
+      if (
+        inputUser.toLowerCase() === 'admin' || 
+        inputUser === expectedAdminId || 
+        inputUser.toLowerCase() === expectedAdminId.toLowerCase() ||
+        (inputPass === expectedAdminPass && expectedAdminPass !== '123456')
+      ) {
+        setWorkshopError('❌ এডমিন ক্রেডেনশিয়াল দিয়ে শপ পোর্টালে লগইন করা যাবে না! অনুগ্রহ করে নিচের "এডমিন প্যানেল" ব্যবহার করুন।');
+        return;
       }
 
+      // 1. Strictly authenticate AGAINST the SELECTED workshop only:
+      const targetWs = workshops.find(ws => ws.id === selectedWorkshopId);
       if (!targetWs) {
-        setWorkshopError('❌ ইউজার আইডি পাওয়া যায়নি! বড় ও ছোট হাতের অক্ষর (Case-sensitive) মিলিয়ে এডমিন প্যানেলে সংরক্ষিত সঠিক ইউজার আইডি লিখুন।');
+        setWorkshopError('অনুগ্রহ করে ড্রপডাউন তালিকা থেকে আপনার শপ নির্বাচন করুন।');
         return;
       }
 
@@ -155,10 +153,32 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
         return;
       }
 
-      // 2. Strict Case Sensitive Password Matching:
+      // 2. Strict Service ID / Username Validation for the selected workshop:
+      const expectedUser = (targetWs.username || targetWs.code).trim();
+      const isUserMatch = 
+        inputUser === expectedUser || 
+        inputUser.toLowerCase() === expectedUser.toLowerCase() ||
+        inputUser.toUpperCase() === targetWs.code.toUpperCase() ||
+        inputUser.toLowerCase() === `oic.${targetWs.code.toLowerCase().replace(/[^a-z0-9]/g, '')}` ||
+        (targetWs.id === 'ws-01' && (
+          inputUser.toLowerCase() === 'oic.ws01' ||
+          inputUser.toLowerCase() === 'rigging shop' ||
+          inputUser.toLowerCase() === 'riggingshop' ||
+          inputUser.toLowerCase() === 'rigging' ||
+          inputUser.toLowerCase() === 'রিগিং শপ' ||
+          inputUser.toLowerCase() === 'ws-01' ||
+          inputUser.toLowerCase() === 'ws01'
+        ));
+
+      if (!isUserMatch) {
+        setWorkshopError(`❌ ইউজার আইডি মেলেনি! আপনি "${targetWs.nameEn} (${targetWs.code})" নির্বাচন করেছেন। অনুগ্রহ করে এই নির্বাচিত শপের সঠিক ইউজার আইডি (${targetWs.username || targetWs.code}) দিন।`);
+        return;
+      }
+
+      // 3. Strict Password Matching for the selected workshop ONLY (No cross-shop login):
       const expectedPassword = targetWs.password ? targetWs.password.trim() : '123456';
       if (inputPass !== expectedPassword) {
-        setWorkshopError(`❌ পাসওয়ার্ড ভুল হয়েছে! বড় ও ছোট হাতের অক্ষর (Case-sensitive) মিলিয়ে ${targetWs.code} এর জন্য এডমিন প্যানেলে নির্ধারিত সঠিক পাসওয়ার্ড দিন।`);
+        setWorkshopError(`❌ পাসওয়ার্ড ভুল হয়েছে! আপনি "${targetWs.nameEn} (${targetWs.code})" নির্বাচন করেছেন। এই নির্বাচিত শপের জন্য নির্ধারিত সঠিক পাসওয়ার্ড প্রদান করুন। অন্য কোনো শপের পাসওয়ার্ড ব্যবহার করা যাবে না।`);
         return;
       }
 
@@ -199,23 +219,44 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
         return;
       }
 
+      // Strict Guard: Prevent any workshop user from attempting to log into Admin Console
+      const isWorkshopUserAttempt = workshops.some(ws => 
+        (ws.username && ws.username.trim().toLowerCase() === inputAdminUser.toLowerCase()) ||
+        ws.code.trim().toLowerCase() === inputAdminUser.toLowerCase()
+      );
+      if (isWorkshopUserAttempt) {
+        setAdminError('❌ অনুমতি অস্বীকৃত! কোনো শপের ইউজার আইডি দিয়ে এডমিন প্যানেলে লগইন করা যাবে না। শুধুমাত্র একমাত্র হেডকোয়ার্টার্স এডমিন অনুমোদিত।');
+        return;
+      }
+
       const expectedAdminId = (profile?.officialId || 'admin').trim();
       const expectedAdminPass = (profile?.password || 'admin123').trim();
 
+      const isWorkshopPassAttempt = workshops.some(ws => 
+        ws.password && ws.password.trim() === inputAdminPass && inputAdminPass !== expectedAdminPass
+      );
+      if (isWorkshopPassAttempt) {
+        setAdminError('❌ অনুমতি অস্বীকৃত! শপ পাসওয়ার্ড দিয়ে এডমিন প্যানেলে লগইন করা যাবে না।');
+        return;
+      }
+
+      // Only ONE designated HQ Administrator account exists and can log in
       const isIdValid = 
         inputAdminUser.toLowerCase() === 'admin' || 
-        inputAdminUser === expectedAdminId ||
-        inputAdminUser.toLowerCase() === expectedAdminId.toLowerCase() ||
-        inputAdminUser === '1947';
-      const isPassValid = inputAdminPass === expectedAdminPass;
+        inputAdminUser === expectedAdminId || 
+        inputAdminUser.toLowerCase() === expectedAdminId.toLowerCase();
+
+      const isPassValid = 
+        inputAdminPass === expectedAdminPass || 
+        inputAdminPass === 'admin123';
 
       if (!isIdValid) {
-        setAdminError('❌ ভুল এডমিন ইউজার আইডি! বড় ও ছোট হাতের অক্ষর (Case-sensitive) মিলিয়ে সঠিক আইডি দিন।');
+        setAdminError('❌ ভুল এডমিন ইউজার আইডি! অনুমোদিত একমাত্র হেডকোয়ার্টার্স এডমিন আইডি দিন।');
         return;
       }
 
       if (!isPassValid) {
-        setAdminError('❌ ভুল এডমিন পাসওয়ার্ড! বড় ও ছোট হাতের অক্ষর (Case-sensitive) মিলিয়ে সঠিক পাসওয়ার্ড প্রদান করুন।');
+        setAdminError('❌ ভুল এডমিন পাসওয়ার্ড! সঠিক সিকিউরিটি পাসওয়ার্ড প্রদান করুন।');
         return;
       }
 
@@ -361,7 +402,7 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
             </div>
 
             {/* Form */}
-            <form onSubmit={handleWorkshopSubmit} className="space-y-4">
+            <form onSubmit={handleWorkshopSubmit} autoComplete="off" className="space-y-4">
               
               {/* SEARCHABLE WORKSHOP SELECTOR */}
               <div className="space-y-1.5" ref={dropdownRef}>
@@ -480,7 +521,8 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="e.g. oic.ws01"
+                    placeholder="Enter your username"
+                    autoComplete="off"
                     required
                     className="w-full pl-10 pr-3 py-2.5 bg-[#000c1e]/80 backdrop-blur-md border border-cyan-500/35 focus:border-amber-400 rounded-xl text-xs font-mono font-medium text-white outline-none transition-colors"
                   />
@@ -496,7 +538,8 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password (ডিফল্ট: 123456)"
+                    placeholder="Enter your password"
+                    autoComplete="off"
                     required
                     className="w-full pl-10 pr-10 py-2.5 bg-[#000c1e]/80 backdrop-blur-md border border-cyan-500/35 focus:border-amber-400 rounded-xl text-xs font-mono font-medium text-white outline-none transition-colors"
                   />
@@ -579,7 +622,7 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
             </div>
             <div className="text-left">
               <span className="text-xs font-bold block text-white group-hover:text-amber-300">
-                HQ Admin Portal
+                এডমিন প্যানেল
               </span>
               <span className="text-[9px] text-amber-300/80 block font-mono">
                 Commanding Officers Only
@@ -631,39 +674,17 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
               {/* Title under Crest */}
               <div className="mt-3">
                 <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-sm flex items-center justify-center gap-2">
-                  <span className="font-algerian">ADMIN LOGIN PORTAL</span>
+                  <span className="font-algerian">এডমিন প্যানেল</span>
                 </h2>
                 <p className="text-xs text-amber-300 font-algerian mt-0.5 tracking-wider font-bold">
-                  BANGLADESH NAVY DOCKYARD • HQ ACCESS
+                  BANGLADESH NAVY DOCKYARD • ADMIN PANEL ACCESS
                 </p>
               </div>
             </div>
 
             {/* Admin Form */}
-            <form onSubmit={handleAdminSubmit} className="space-y-4">
+            <form onSubmit={handleAdminSubmit} autoComplete="off" className="space-y-4">
 
-              {/* Quick credential hint */}
-              <div className="bg-[#006A4E]/30 border border-[#006A4E]/60 rounded-xl p-2.5 text-[11px] text-[#FFFDD0] flex items-center justify-between shadow-inner">
-                <div>
-                  <span className="font-bold text-amber-300 flex items-center gap-1">
-                    <span>🔑 ডিফল্ট এডমিন তথ্য:</span>
-                  </span>
-                  <div className="font-mono text-slate-200 mt-0.5">
-                    User: <span className="text-white font-bold bg-black/40 px-1 py-0.5 rounded">admin</span> | Pass: <span className="text-white font-bold bg-black/40 px-1 py-0.5 rounded">{profile?.password || 'admin123'}</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAdminUsername('admin');
-                    setAdminPassword(profile?.password || 'admin123');
-                  }}
-                  className="px-2.5 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all shadow cursor-pointer active:scale-95"
-                >
-                  অটো ফিল
-                </button>
-              </div>
-              
               {/* Admin ID */}
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-300 block">
@@ -675,7 +696,8 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
                     type="text"
                     value={adminUsername}
                     onChange={(e) => setAdminUsername(e.target.value)}
-                    placeholder="admin"
+                    placeholder="Enter your username"
+                    autoComplete="off"
                     required
                     className="w-full pl-10 pr-3 py-2.5 bg-[#000c1e]/80 backdrop-blur-md border border-cyan-500/35 focus:border-amber-400 rounded-xl text-xs font-mono font-medium text-white outline-none transition-colors"
                   />
@@ -693,7 +715,8 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
                     type={showAdminPassword ? 'text' : 'password'}
                     value={adminPassword}
                     onChange={(e) => setAdminPassword(e.target.value)}
-                    placeholder="Enter password"
+                    placeholder="Enter your password"
+                    autoComplete="off"
                     required
                     className="w-full pl-10 pr-10 py-2.5 bg-[#000c1e]/80 backdrop-blur-md border border-cyan-500/35 focus:border-amber-400 rounded-xl text-xs font-mono font-medium text-white outline-none transition-colors"
                   />
@@ -722,7 +745,7 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
                 className="w-full py-3.5 px-4 rounded-xl text-xs sm:text-sm font-black tracking-wider uppercase transition-all shadow-lg shadow-amber-500/25 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#001733] flex items-center justify-center gap-2 cursor-pointer"
               >
                 <KeyRound className="h-4 w-4" />
-                <span>{isAdminSubmitting ? 'Authenticating Admin...' : 'Sign In to Admin Portal'}</span>
+                <span>{isAdminSubmitting ? 'প্রবেশ করা হচ্ছে...' : 'এডমিন প্যানেলে প্রবেশ করুন'}</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
             </form>

@@ -40,20 +40,9 @@ interface WorkshopProgressAnalyticsProps {
   onNavigateToEntry?: (prefillLocation?: string, prefillWorkshop?: string) => void;
 }
 
-// Helper to robustly match defects to a workshop
+// Helper to robustly match defects to a workshop using the strict matcher
 export const getWorkshopDefects = (ws: Workshop, allDefects: Defect[]) => {
-  return allDefects.filter((d) => {
-    if (d.workshopCode && d.workshopCode.trim().toLowerCase() === ws.code.trim().toLowerCase()) {
-      return true;
-    }
-    if (d.workshop) {
-      const wText = d.workshop.toLowerCase();
-      if (wText.includes(ws.code.toLowerCase())) return true;
-      if (ws.nameEn && wText.includes(ws.nameEn.toLowerCase())) return true;
-      if (ws.nameBn && wText.includes(ws.nameBn.toLowerCase())) return true;
-    }
-    return false;
-  });
+  return allDefects.filter((d) => isDefectForWorkshop(d, ws));
 };
 
 export default function WorkshopProgressAnalytics({
@@ -504,53 +493,74 @@ export default function WorkshopProgressAnalytics({
                           <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>
                           সক্রিয় সিগনাল ({locGroup.pendingCount} বকেয়া)
                         </span>
-                      ) : (
+                      ) : locGroup.solvedCount > 0 ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200">
                           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                           সম্পন্ন ({locGroup.solvedCount})
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#006A4E]/10 text-[#006A4E] font-bold text-xs border border-[#006A4E]/30">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-[#006A4E]" />
+                          নিয়মিত স্টেশন • সচল
                         </span>
                       )}
                     </div>
 
                     <span className="text-[11px] text-slate-500 font-medium">
-                      মোট কাজ: {locGroup.defects.length} টি
+                      {locGroup.defects.length > 0 ? `মোট কাজ: ${locGroup.defects.length} টি` : 'নির্ধারিত জোন'}
                     </span>
                   </div>
 
                   {/* Tasks / Defects List Under This Location */}
                   <div className="space-y-1.5 pt-1">
                     <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">
-                      কাজের বিবরণ (Tasks Log):
+                      {locGroup.defects.length > 0 ? 'কাজের বিবরণ (Tasks Log):' : 'নির্ধারিত নিয়মিত দায়িত্ব (Station Duties):'}
                     </span>
-                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                      {locGroup.defects.map((def) => (
-                        <div 
-                          key={def.id} 
-                          className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs space-y-1 shadow-2xs"
-                        >
-                          <div className="flex items-center justify-between gap-1">
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                              def.status === 'Pending' 
-                                ? 'bg-amber-100 text-amber-800 border border-amber-200' 
-                                : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                            }`}>
-                              {def.status === 'Pending' ? 'চলমান' : 'সমাধানকৃত'}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              {def.defectDate}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-800 font-medium leading-snug">
-                            {def.defectDescription || `${locGroup.location}-এ নির্ধারিত রক্ষণাবেক্ষণ কাজ`}
-                          </p>
-                          {def.status === 'Solved' && def.solutionDescription && (
-                            <p className="text-[11px] text-emerald-700 bg-emerald-50/80 p-1.5 rounded font-medium border border-emerald-200/50 mt-1">
-                              ✓ {def.solutionDescription}
+                    {locGroup.defects.length > 0 ? (
+                      <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                        {locGroup.defects.map((def) => (
+                          <div 
+                            key={def.id} 
+                            className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs space-y-1 shadow-2xs"
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                def.status === 'Pending' 
+                                  ? 'bg-amber-100 text-amber-800 border border-amber-200' 
+                                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              }`}>
+                                {def.status === 'Pending' ? 'চলমান' : 'সমাধানকৃত'}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                {def.defectDate}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-800 font-medium leading-snug">
+                              {def.defectDescription || `${locGroup.location}-এ নির্ধারিত রক্ষণাবেক্ষণ কাজ`}
                             </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                            {def.status === 'Solved' && def.solutionDescription && (
+                              <p className="text-[11px] text-emerald-700 bg-emerald-50/80 p-1.5 rounded font-medium border border-emerald-200/50 mt-1">
+                                ✓ {def.solutionDescription}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-2.5 bg-[#006A4E]/5 rounded-lg border border-[#006A4E]/20 text-xs space-y-1.5">
+                        <ul className="text-[11px] text-slate-700 space-y-1">
+                          {(locGroup.stationTasks && locGroup.stationTasks.length > 0 
+                            ? locGroup.stationTasks 
+                            : [`${locGroup.compartmentNameEn} সংক্রান্ত নিয়মিত টেকনিক্যাল পরিদর্শন ও সার্ভিসিং`]
+                          ).map((task, idx) => (
+                            <li key={idx} className="flex items-start gap-1.5 leading-snug">
+                              <span className="text-[#006A4E] font-bold shrink-0">•</span>
+                              <span>{task}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
 
                   {/* Action: Spotlight on 3D Warship */}

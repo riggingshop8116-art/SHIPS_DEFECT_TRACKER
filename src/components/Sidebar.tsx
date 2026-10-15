@@ -60,12 +60,19 @@ export default function Sidebar({
     ? workshops?.find(ws => ws.id === authSession.workshopId || ws.code === authSession.workshopCode)
     : null;
 
-  const displayName = currentWorkshop?.oicName 
-    ? (currentWorkshop.oicRank ? `${currentWorkshop.oicRank} ${currentWorkshop.oicName}` : currentWorkshop.oicName)
-    : (authSession?.officerName || profile.name);
+  const displayName = isAdmin 
+    ? (profile.name || 'Lt Commander M. A. Rahman')
+    : (currentWorkshop?.oicName 
+        ? (currentWorkshop.oicRank ? `${currentWorkshop.oicRank} ${currentWorkshop.oicName}` : currentWorkshop.oicName)
+        : (authSession?.officerName || 'Workshop Officer'));
 
-  const displayRank = currentWorkshop?.oicRank || authSession?.officerRank || profile.rank;
-  const displayAvatar = currentWorkshop?.photo || authSession?.photo || profile.avatar || '/anchor.jpg';
+  const displayRank = isAdmin 
+    ? (profile.rank || 'Commander, BN')
+    : (currentWorkshop?.oicRank || authSession?.officerRank || 'Officer-in-Charge');
+
+  const displayAvatar = isAdmin
+    ? (profile.avatar || '/anchor.jpg')
+    : (currentWorkshop?.photo || authSession?.photo || '/anchor.jpg');
 
   const handleSelectAdminOption = (sub: AdminSubTab) => {
     setActiveTab('admin');

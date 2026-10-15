@@ -42,21 +42,31 @@ export default function ProfileModal({
     ? workshops.find(ws => ws.id === authSession.workshopId || ws.code === authSession.workshopCode)
     : null;
 
-  // Form State
+  // Form State - strictly segregated between Admin and individual Workshops
   const [name, setName] = useState<string>(
-    currentWorkshop?.oicName || authSession?.officerName || profile.name || ''
+    isAdmin
+      ? (profile.name || '')
+      : (currentWorkshop?.oicName || authSession?.officerName || 'Workshop Officer')
   );
   const [rank, setRank] = useState<string>(
-    currentWorkshop?.oicRank || authSession?.officerRank || profile.rank || 'Lieutenant Commander, BN'
+    isAdmin
+      ? (profile.rank || 'Commander, BN')
+      : (currentWorkshop?.oicRank || authSession?.officerRank || 'Officer-in-Charge')
   );
   const [officialId, setOfficialId] = useState<string>(
-    currentWorkshop?.username || authSession?.username || profile.officialId || 'P No. 1420'
+    isAdmin
+      ? (profile.officialId || 'admin')
+      : (currentWorkshop?.username || authSession?.username || currentWorkshop?.code || 'Officer ID')
   );
   const [phone, setPhone] = useState<string>(
-    currentWorkshop?.phoneExt ? `Ext: ${currentWorkshop.phoneExt}` : 'Ext: 8116 (BN Dockyard)'
+    isAdmin
+      ? 'Ext: 8116 (BN Dockyard HQ)'
+      : (currentWorkshop?.phoneExt ? `Ext: ${currentWorkshop.phoneExt}` : 'Ext: 8116')
   );
   const [avatar, setAvatar] = useState<string>(
-    currentWorkshop?.photo || authSession?.photo || profile.avatar || '/anchor.jpg'
+    isAdmin
+      ? (profile.avatar || '/anchor.jpg')
+      : (currentWorkshop?.photo || authSession?.photo || '/anchor.jpg')
   );
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [dragActive, setDragActive] = useState<boolean>(false);
