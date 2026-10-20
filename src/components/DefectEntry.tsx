@@ -502,9 +502,9 @@ export default function DefectEntry({
           {/* Defect Details & Solution Form Sections in Two Columns */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
             
-            {/* Left: Defect Information */}
-            <div className="bg-slate-50 border border-slate-200 p-5 rounded-xl space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+            {/* Left: Defect Information - Styled with matching border-2 just like Solution section */}
+            <div className="bg-rose-50/20 border-2 border-rose-500/30 p-5 rounded-xl space-y-4 shadow-2xs">
+              <div className="flex items-center justify-between border-b border-rose-500/20 pb-2.5">
                 <span className="text-xs font-bold text-slate-900 uppercase flex items-center gap-1.5">
                   <ShieldAlert className="h-4 w-4 text-rose-600" />
                   <span>DEFECT DETAILS</span>

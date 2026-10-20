@@ -132,10 +132,11 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
       const expectedAdminId = (profile?.officialId || 'admin').trim();
       const expectedAdminPass = (profile?.password || 'admin123').trim();
       if (
-        inputUser.toLowerCase() === 'admin' || 
         inputUser === expectedAdminId || 
+        inputUser === 'admin' ||
         inputUser.toLowerCase() === expectedAdminId.toLowerCase() ||
-        (inputPass === expectedAdminPass && expectedAdminPass !== '123456')
+        inputUser.toLowerCase() === 'admin' ||
+        inputPass === expectedAdminPass
       ) {
         setWorkshopError('❌ এডমিন ক্রেডেনশিয়াল দিয়ে শপ পোর্টালে লগইন করা যাবে না! অনুগ্রহ করে নিচের "এডমিন প্যানেল" ব্যবহার করুন।');
         return;
@@ -153,32 +154,32 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
         return;
       }
 
-      // 2. Strict Service ID / Username Validation for the selected workshop:
-      const expectedUser = (targetWs.username || targetWs.code).trim();
+      // 2. Validate User ID for the selected workshop (flexible case-insensitivity, no credential suggestion):
+      const designatedUser = (targetWs.username || `oic.${targetWs.code.toLowerCase().replace(/[^a-z0-9]/g, '')}`).trim();
+      const shopCode = targetWs.code.trim();
+      const normalizedInput = inputUser.toLowerCase();
+
       const isUserMatch = 
-        inputUser === expectedUser || 
-        inputUser.toLowerCase() === expectedUser.toLowerCase() ||
-        inputUser.toUpperCase() === targetWs.code.toUpperCase() ||
-        inputUser.toLowerCase() === `oic.${targetWs.code.toLowerCase().replace(/[^a-z0-9]/g, '')}` ||
+        normalizedInput === designatedUser.toLowerCase() ||
+        normalizedInput === shopCode.toLowerCase() ||
+        normalizedInput === `ws${targetWs.code.replace(/[^0-9]/g, '')}` ||
         (targetWs.id === 'ws-01' && (
-          inputUser.toLowerCase() === 'oic.ws01' ||
-          inputUser.toLowerCase() === 'rigging shop' ||
-          inputUser.toLowerCase() === 'riggingshop' ||
-          inputUser.toLowerCase() === 'rigging' ||
-          inputUser.toLowerCase() === 'রিগিং শপ' ||
-          inputUser.toLowerCase() === 'ws-01' ||
-          inputUser.toLowerCase() === 'ws01'
+          normalizedInput === 'oic.ws01' ||
+          normalizedInput === 'rigging shop' ||
+          normalizedInput === 'riggingshop' ||
+          normalizedInput === 'rigging' ||
+          normalizedInput === 'রিগিং শপ'
         ));
 
       if (!isUserMatch) {
-        setWorkshopError(`❌ ইউজার আইডি মেলেনি! আপনি "${targetWs.nameEn} (${targetWs.code})" নির্বাচন করেছেন। অনুগ্রহ করে এই নির্বাচিত শপের সঠিক ইউজার আইডি (${targetWs.username || targetWs.code}) দিন।`);
+        setWorkshopError('❌ ইউজার আইডি ভুল হয়েছে! অনুগ্রহ করে সঠিক ইউজার আইডি প্রদান করুন।');
         return;
       }
 
-      // 3. Strict Password Matching for the selected workshop ONLY (No cross-shop login):
-      const expectedPassword = targetWs.password ? targetWs.password.trim() : '123456';
+      // 3. Password Matching for the selected workshop ONLY (No suggestion/leakage):
+      const expectedPassword = (targetWs.password ? targetWs.password.trim() : '123456');
       if (inputPass !== expectedPassword) {
-        setWorkshopError(`❌ পাসওয়ার্ড ভুল হয়েছে! আপনি "${targetWs.nameEn} (${targetWs.code})" নির্বাচন করেছেন। এই নির্বাচিত শপের জন্য নির্ধারিত সঠিক পাসওয়ার্ড প্রদান করুন। অন্য কোনো শপের পাসওয়ার্ড ব্যবহার করা যাবে না।`);
+        setWorkshopError('❌ পাসওয়ার্ড ভুল হয়েছে! অনুগ্রহ করে সঠিক পাসওয়ার্ড প্রদান করুন।');
         return;
       }
 
@@ -190,7 +191,7 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
         workshopCode: targetWs.code,
         workshopNameBn: targetWs.nameBn,
         workshopNameEn: targetWs.nameEn,
-        username: targetWs.username || username.trim(),
+        username: designatedUser,
         officerName: targetWs.oicName ? `${targetWs.oicRank} ${targetWs.oicName}` : `${targetWs.oicRank}`,
         officerRank: targetWs.oicRank,
         photo: targetWs.photo,
@@ -240,23 +241,18 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
         return;
       }
 
-      // Only ONE designated HQ Administrator account exists and can log in
-      const isIdValid = 
-        inputAdminUser.toLowerCase() === 'admin' || 
-        inputAdminUser === expectedAdminId || 
-        inputAdminUser.toLowerCase() === expectedAdminId.toLowerCase();
-
-      const isPassValid = 
-        inputAdminPass === expectedAdminPass || 
-        inputAdminPass === 'admin123';
+      // Admin Validation (Flexible case-insensitivity, no credential suggestion/leakage):
+      const isIdValid = (inputAdminUser.toLowerCase() === expectedAdminId.toLowerCase() || inputAdminUser.toLowerCase() === 'admin');
 
       if (!isIdValid) {
-        setAdminError('❌ ভুল এডমিন ইউজার আইডি! অনুমোদিত একমাত্র হেডকোয়ার্টার্স এডমিন আইডি দিন।');
+        setAdminError('❌ ভুল এডমিন ইউজার আইডি! অনুগ্রহ করে সঠিক আইডি প্রদান করুন।');
         return;
       }
 
+      const isPassValid = (inputAdminPass === expectedAdminPass || inputAdminPass === 'admin123');
+
       if (!isPassValid) {
-        setAdminError('❌ ভুল এডমিন পাসওয়ার্ড! সঠিক সিকিউরিটি পাসওয়ার্ড প্রদান করুন।');
+        setAdminError('❌ ভুল এডমিন পাসওয়ার্ড! অনুগ্রহ করে সঠিক পাসওয়ার্ড প্রদান করুন।');
         return;
       }
 
@@ -369,7 +365,7 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
         <div className="w-full max-w-md animate-fade-in">
           
           {/* Executive Glassmorphism Card Matching Oceanic Fleet Background */}
-          <div className="bg-[#00142e]/85 backdrop-blur-2xl border border-cyan-400/40 rounded-3xl p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,10,35,0.95)] ring-1 ring-white/15 relative overflow-hidden">
+          <div className="bg-[#00142e]/85 backdrop-blur-2xl border border-cyan-400/40 rounded-3xl p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,10,35,0.95)] ring-1 ring-white/15 relative overflow-hidden max-h-[92vh] overflow-y-auto custom-scrollbar">
             
             {/* Top Navy-Gold Line Accent */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400"></div>
@@ -523,6 +519,9 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your username"
                     autoComplete="off"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     required
                     className="w-full pl-10 pr-3 py-2.5 bg-[#000c1e]/80 backdrop-blur-md border border-cyan-500/35 focus:border-amber-400 rounded-xl text-xs font-mono font-medium text-white outline-none transition-colors"
                   />
@@ -540,6 +539,9 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
                     autoComplete="off"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     required
                     className="w-full pl-10 pr-10 py-2.5 bg-[#000c1e]/80 backdrop-blur-md border border-cyan-500/35 focus:border-amber-400 rounded-xl text-xs font-mono font-medium text-white outline-none transition-colors"
                   />
@@ -640,7 +642,7 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           
           {/* Executive Glassmorphism Card Matching User Dialog Box */}
-          <div className="w-full max-w-md bg-[#00142e]/95 backdrop-blur-2xl border border-cyan-400/40 rounded-3xl p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,10,35,0.95)] ring-1 ring-white/15 relative overflow-hidden text-white">
+          <div className="w-full max-w-md bg-[#00142e]/95 backdrop-blur-2xl border border-cyan-400/40 rounded-3xl p-6 sm:p-8 shadow-[0_25px_60px_-15px_rgba(0,10,35,0.95)] ring-1 ring-white/15 relative overflow-hidden text-white max-h-[92vh] overflow-y-auto custom-scrollbar">
             
             {/* Top Navy-Gold Line Accent */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-cyan-400 to-emerald-400"></div>
@@ -698,6 +700,9 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
                     onChange={(e) => setAdminUsername(e.target.value)}
                     placeholder="Enter your username"
                     autoComplete="off"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     required
                     className="w-full pl-10 pr-3 py-2.5 bg-[#000c1e]/80 backdrop-blur-md border border-cyan-500/35 focus:border-amber-400 rounded-xl text-xs font-mono font-medium text-white outline-none transition-colors"
                   />
@@ -717,6 +722,9 @@ export default function Login({ workshops, dockyardConfig, profile, onLoginSucce
                     onChange={(e) => setAdminPassword(e.target.value)}
                     placeholder="Enter your password"
                     autoComplete="off"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     required
                     className="w-full pl-10 pr-10 py-2.5 bg-[#000c1e]/80 backdrop-blur-md border border-cyan-500/35 focus:border-amber-400 rounded-xl text-xs font-mono font-medium text-white outline-none transition-colors"
                   />

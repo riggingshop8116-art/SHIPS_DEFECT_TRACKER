@@ -50,6 +50,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'M Zaman',
     phoneExt: '4202',
     status: 'active',
+    username: 'oic.ws02',
+    password: '123456',
     description: 'Precision machining, lathe turning, milling, and fabrication of mechanical spare parts.'
   },
   {
@@ -62,6 +64,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'N Chowdhury',
     phoneExt: '4203',
     status: 'active',
+    username: 'oic.ws03',
+    password: '123456',
     description: 'Hull plate replacement, structural integrity inspection, and drydock maintenance.'
   },
   {
@@ -74,6 +78,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'K R Hasan',
     phoneExt: '4204',
     status: 'active',
+    username: 'oic.ws04',
+    password: '123456',
     description: 'TIG, MIG, and submerged arc welding for marine structures and pressure assemblies.'
   },
   {
@@ -86,6 +92,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'T A Islam',
     phoneExt: '4205',
     status: 'active',
+    username: 'oic.ws05',
+    password: '123456',
     description: 'Generators, electric motors, main switchboards, power distribution, and marine cabling.'
   },
   {
@@ -98,6 +106,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'S Rahman',
     phoneExt: '4206',
     status: 'active',
+    username: 'oic.ws06',
+    password: '123456',
     description: 'Naval surveillance radar, sonar transducers, and electronic navigation systems.'
   },
   {
@@ -110,6 +120,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'H Kabir',
     phoneExt: '4207',
     status: 'active',
+    username: 'oic.ws07',
+    password: '123456',
     description: 'Naval gun mounts, missile launching systems, and weapon servo drive mechanisms.'
   },
   {
@@ -122,6 +134,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'M A Rahman',
     phoneExt: '4208',
     status: 'active',
+    username: 'oic.ws08',
+    password: '123456',
     description: 'Overhauling and rebuilding of main propulsion engines and auxiliary diesel generators.'
   },
   {
@@ -134,6 +148,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'A K Azad',
     phoneExt: '4209',
     status: 'active',
+    username: 'oic.ws09',
+    password: '123456',
     description: 'Bilge, ballast, fuel oil, cooling seawater lines, and high-pressure manifold piping.'
   },
   {
@@ -146,6 +162,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'R Ahmed',
     phoneExt: '4210',
     status: 'active',
+    username: 'oic.ws10',
+    password: '123456',
     description: 'Grit blasting, zinc primer application, and anti-fouling underwater hull protection.'
   },
   {
@@ -158,6 +176,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'J Alam',
     phoneExt: '4211',
     status: 'active',
+    username: 'oic.ws11',
+    password: '123456',
     description: 'Auxiliary boilers, steam pressure piping, valves, and water calorifier maintenance.'
   },
   {
@@ -170,6 +190,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'D K Banik',
     phoneExt: '4212',
     status: 'active',
+    username: 'oic.ws12',
+    password: '123456',
     description: 'Gas turbines, reduction gearboxes, flexible couplings, and shaft drive trains.'
   },
   {
@@ -182,6 +204,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'P K Roy',
     phoneExt: '4213',
     status: 'active',
+    username: 'oic.ws13',
+    password: '123456',
     description: 'Inflatable life rafts, survival suits, weather canvas covers, and rescue gear.'
   },
   {
@@ -194,6 +218,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'M Shafiq',
     phoneExt: '4214',
     status: 'active',
+    username: 'oic.ws14',
+    password: '123456',
     description: 'Sand mold casting of bronze, brass, manganese, and marine cast-iron parts.'
   },
   {
@@ -206,6 +232,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'N Talukdar',
     phoneExt: '4215',
     status: 'active',
+    username: 'oic.ws15',
+    password: '123456',
     description: 'Drydock keel blocking alignment, shoring, timber staging, and interior joinery.'
   },
   {
@@ -218,6 +246,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'S Ahmed',
     phoneExt: '4216',
     status: 'active',
+    username: 'oic.ws16',
+    password: '123456',
     description: 'High-precision specialized tooling, custom jigs, dies, and inspection gauges.'
   },
   {
@@ -230,6 +260,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'F Ahmed',
     phoneExt: '4217',
     status: 'active',
+    username: 'oic.ws17',
+    password: '123456',
     description: 'Optical rangefinders, periscope prisms, night-vision sights, and weapon directors.'
   },
   {
@@ -242,6 +274,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'G Mostafa',
     phoneExt: '4218',
     status: 'active',
+    username: 'oic.ws18',
+    password: '123456',
     description: 'Central air-conditioning chillers, cold provision storage, and air handling units.'
   },
   {
@@ -254,6 +288,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'H Hasan',
     phoneExt: '4219',
     status: 'active',
+    username: 'oic.ws19',
+    password: '123456',
     description: 'Steering gear hydraulic rams, anchor capstans, and high-pressure air compressors.'
   },
   {
@@ -266,6 +302,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'M Rafiq',
     phoneExt: '4220',
     status: 'active',
+    username: 'oic.ws20',
+    password: '123456',
     description: 'Hard chrome plating, zinc galvanizing, and sacrificial anode corrosion prevention.'
   },
   {
@@ -278,6 +316,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'I Khandaker',
     phoneExt: '4221',
     status: 'active',
+    username: 'oic.ws21',
+    password: '123456',
     description: 'Submarine and warship heavy-duty battery bank charging, discharge load testing, and maintenance.'
   },
   {
@@ -290,6 +330,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'T Mahmud',
     phoneExt: '4222',
     status: 'active',
+    username: 'oic.ws22',
+    password: '123456',
     description: 'Underwater hull inspection, wet welding, sea chest clearing, and propeller de-fouling.'
   },
   {
@@ -302,6 +344,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'B Das',
     phoneExt: '4223',
     status: 'active',
+    username: 'oic.ws23',
+    password: '123456',
     description: 'Satellite communications, tactical HF/VHF naval radios, and GPS receiver units.'
   },
   {
@@ -314,6 +358,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'J Islam',
     phoneExt: '4224',
     status: 'active',
+    username: 'oic.ws24',
+    password: '123456',
     description: 'Calibration of precision pressure transmitters, temperature sensors, and tachometers.'
   },
   {
@@ -326,6 +372,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'M K Chowdhury',
     phoneExt: '4225',
     status: 'active',
+    username: 'oic.ws25',
+    password: '123456',
     description: 'Ultrasonic flaw detection, radiographic testing, and magnetic particle examination.'
   },
   {
@@ -338,6 +386,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'S N Shikdar',
     phoneExt: '4226',
     status: 'active',
+    username: 'oic.ws26',
+    password: '123456',
     description: 'Tailshaft dynamic balancing, stern tube bearings, and controllable pitch propeller servicing.'
   },
   {
@@ -350,6 +400,8 @@ export const DEFAULT_WORKSHOPS: Workshop[] = [
     oicName: 'R U Ahmed',
     phoneExt: '4227',
     status: 'active',
+    username: 'oic.ws27',
+    password: '123456',
     description: 'Heavy shipyard portal cranes, tugboat maneuvering, and drydock transfer vehicles.'
   }
 ];

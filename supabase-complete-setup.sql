@@ -123,6 +123,46 @@ CREATE TABLE IF NOT EXISTS public.user_profile (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Table: admin_profile (Dedicated HQ Administrator Profile, Photo & Credentials Table)
+CREATE TABLE IF NOT EXISTS public.admin_profile (
+  id TEXT PRIMARY KEY DEFAULT 'admin-hq-01',
+  official_id TEXT NOT NULL DEFAULT 'admin',
+  password TEXT NOT NULL DEFAULT 'admin123',
+  name TEXT NOT NULL DEFAULT 'Lt Commander M. A. Rahman',
+  rank TEXT NOT NULL DEFAULT 'Engineer Officer (Marine Engineer)',
+  appointment TEXT NOT NULL DEFAULT 'Staff Officer (Technical)',
+  intercom TEXT NOT NULL DEFAULT '4200',
+  phone TEXT NOT NULL DEFAULT '+88031-740171-79 (Ext: 4200)',
+  email TEXT NOT NULL DEFAULT 'dockyard.tech@navy.mil.bd',
+  avatar TEXT DEFAULT '/anchor.jpg',
+  role TEXT NOT NULL DEFAULT 'admin',
+  last_login TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed default HQ Administrator record
+INSERT INTO public.admin_profile (id, official_id, password, name, rank, appointment, intercom, phone, email, avatar, role)
+VALUES (
+  'admin-hq-01',
+  'admin',
+  'admin123',
+  'Lt Commander M. A. Rahman',
+  'Engineer Officer (Marine Engineer)',
+  'Staff Officer (Technical)',
+  '4200',
+  '+88031-740171-79 (Ext: 4200)',
+  'dockyard.tech@navy.mil.bd',
+  '/anchor.jpg',
+  'admin'
+)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  rank = EXCLUDED.rank,
+  official_id = EXCLUDED.official_id,
+  avatar = EXCLUDED.avatar,
+  updated_at = NOW();
+
 -- ------------------------------------------------------------------------------
 -- 3. ROW LEVEL SECURITY (RLS) POLICIES
 -- ------------------------------------------------------------------------------
@@ -133,6 +173,15 @@ ALTER TABLE public.ships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dockyard_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_profile ENABLE ROW LEVEL SECURITY;
+
+-- Admin Profile RLS
+DROP POLICY IF EXISTS "Public Admin Profile Read" ON public.admin_profile;
+CREATE POLICY "Public Admin Profile Read" ON public.admin_profile FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Public Admin Profile Insert" ON public.admin_profile;
+CREATE POLICY "Public Admin Profile Insert" ON public.admin_profile FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Public Admin Profile Update" ON public.admin_profile;
+CREATE POLICY "Public Admin Profile Update" ON public.admin_profile FOR UPDATE USING (true);
 
 -- Defects RLS
 DROP POLICY IF EXISTS "Public Defect Read" ON public.defects;

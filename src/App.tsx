@@ -84,10 +84,10 @@ export default function App() {
     }
   };
 
-  // Core App States with LocalStorage caching
+  // Dedicated Admin Profile State with isolated LocalStorage caching
   const [profile, setProfile] = useState<UserProfile>(() => {
     try {
-      const stored = localStorage.getItem('defect_tracker_profile');
+      const stored = localStorage.getItem('defect_tracker_admin_profile') || localStorage.getItem('defect_tracker_profile');
       if (stored) {
         const parsed = JSON.parse(stored);
         // Ensure Admin profile is never corrupted with Shop 1 credentials
@@ -784,7 +784,7 @@ export default function App() {
         supabaseService.fetchShips(),
         supabaseService.fetchLocations(),
         supabaseService.fetchDockyardConfig(),
-        supabaseService.fetchUserProfile(),
+        supabaseService.fetchAdminProfile(),
         supabaseService.fetchProductionUnits()
       ]);
 
@@ -856,9 +856,10 @@ export default function App() {
           sanitizedProfile.avatar = '/anchor.jpg';
         }
         setProfile(sanitizedProfile);
+        localStorage.setItem('defect_tracker_admin_profile', JSON.stringify(sanitizedProfile));
         localStorage.setItem('defect_tracker_profile', JSON.stringify(sanitizedProfile));
       } else {
-        supabaseService.saveUserProfile(profile);
+        supabaseService.saveAdminProfile(profile);
       }
 
       if (remoteUnits && remoteUnits.length > 0) {
@@ -969,8 +970,9 @@ export default function App() {
 
   const handleUpdateProfile = (newProfile: UserProfile) => {
     setProfile(newProfile);
+    localStorage.setItem('defect_tracker_admin_profile', JSON.stringify(newProfile));
     localStorage.setItem('defect_tracker_profile', JSON.stringify(newProfile));
-    supabaseService.saveUserProfile(newProfile);
+    supabaseService.saveAdminProfile(newProfile);
   };
 
   const handleAddShip = (shipName: string) => {
@@ -1162,8 +1164,9 @@ export default function App() {
         }
       }
     } else {
-      // 2. HQ Admin profile update
+      // 2. HQ Admin profile update (strictly isolated from any workshop profiles)
       setProfile(newProfile);
+      localStorage.setItem('defect_tracker_admin_profile', JSON.stringify(newProfile));
       localStorage.setItem('defect_tracker_profile', JSON.stringify(newProfile));
 
       if (authSession) {
@@ -1178,9 +1181,9 @@ export default function App() {
       }
 
       try {
-        await supabaseService.saveUserProfile(newProfile);
+        await supabaseService.saveAdminProfile(newProfile);
       } catch (err) {
-        console.warn('Failed to save user profile to Supabase', err);
+        console.warn('Failed to save admin profile to Supabase', err);
       }
     }
   };
@@ -1604,21 +1607,21 @@ export default function App() {
         </section>
 
         {/* Footer Bar with Glassmorphism */}
-        <footer className="h-9 bg-[#00142e]/80 backdrop-blur-md border-t border-white/10 px-6 md:px-8 flex items-center justify-between text-[11px] text-slate-300 shrink-0 font-mono z-10">
-          <div className="flex items-center gap-2">
-            <span className={`w-1.5 h-1.5 rounded-full ${
+        <footer className="min-h-8 sm:h-9 py-1 sm:py-0 bg-[#00142e]/90 backdrop-blur-md border-t border-white/10 px-3 sm:px-6 md:px-8 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-300 shrink-0 font-mono z-10">
+          <div className="flex items-center gap-2 truncate">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
               supabaseSyncStatus.isConnected 
                 ? (supabaseSyncStatus.isTablesReady ? 'bg-emerald-400 animate-ping' : 'bg-amber-400 animate-pulse')
                 : 'bg-slate-400'
             }`}></span>
-            <span>© 2026 {dockyardConfig.yardNameEn} • Technical Directorate</span>
+            <span className="truncate">© 2026 {dockyardConfig.yardNameEn}</span>
             <span className="hidden md:inline text-slate-400 border-l border-white/20 pl-2">
               Supabase Cloud: {supabaseSyncStatus.isConnected ? (supabaseSyncStatus.isTablesReady ? '🟢 Live Synced' : '🟡 Ready (Run SQL)') : '⚪ Local Cache'}
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-2">
             <span className="hidden sm:inline text-slate-400">Total Workshops: {workshops.length} Units</span>
-            <span className="font-bold text-amber-300">Warship Defect Tracking System v3.0</span>
+            <span className="font-bold text-amber-300 text-[10px] sm:text-[11px]">v3.0 Naval Defect Command</span>
           </div>
         </footer>
 

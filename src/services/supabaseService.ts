@@ -171,13 +171,42 @@ export function mapUserProfileToDb(p: UserProfile): any {
   return {
     id: 'admin_default',
     name: p.name || 'Lt Commander M. A. Rahman',
-    rank: p.rank || 'অফিস রাইটার',
+    rank: p.rank || 'Engineer Officer (Marine Engineer)',
     p_no: p.officialId || 'admin',
     appointment: 'Managing Director & Chief Engineer',
-    intercom: '4001',
+    intercom: '4200',
     email: `pass:${pwd}`,
     unit: 'Naval Dockyard Headquarters',
-    avatar: p.avatar || '',
+    avatar: p.avatar || '/anchor.jpg',
+    updated_at: new Date().toISOString()
+  };
+}
+
+export function mapAdminProfileFromDb(row: any): UserProfile {
+  return {
+    name: row.name || DEFAULT_PROFILE.name,
+    rank: row.rank || DEFAULT_PROFILE.rank,
+    officialId: row.official_id || row.p_no || DEFAULT_PROFILE.officialId,
+    avatar: row.avatar || DEFAULT_PROFILE.avatar,
+    role: 'admin',
+    password: row.password || (row.email && row.email.startsWith('pass:') ? row.email.substring(5) : 'admin123')
+  };
+}
+
+export function mapAdminProfileToDb(p: UserProfile): any {
+  const pwd = p.password || 'admin123';
+  return {
+    id: 'admin-hq-01',
+    official_id: p.officialId || 'admin',
+    password: pwd,
+    name: p.name || 'Lt Commander M. A. Rahman',
+    rank: p.rank || 'Engineer Officer (Marine Engineer)',
+    appointment: 'Staff Officer (Technical)',
+    intercom: '4200',
+    phone: '+88031-740171-79 (Ext: 4200)',
+    email: 'dockyard.tech@navy.mil.bd',
+    avatar: p.avatar || '/anchor.jpg',
+    role: 'admin',
     updated_at: new Date().toISOString()
   };
 }
@@ -589,6 +618,49 @@ export const supabaseService = {
     } catch (e) {
       console.warn('[Supabase] saveUserProfile exception:', e);
       return false;
+    }
+  },
+
+  // 7.1 DEDICATED ADMIN PROFILE & AUTHENTICATION OPERATIONS
+  async fetchAdminProfile(): Promise<UserProfile | null> {
+    try {
+      // 1. Try dedicated admin_profile table first
+      const { data, error } = await supabase
+        .from('admin_profile')
+        .select('*')
+        .eq('id', 'admin-hq-01')
+        .maybeSingle();
+
+      if (!error && data) {
+        return mapAdminProfileFromDb(data);
+      }
+
+      // 2. Fallback to user_profile table if admin_profile table not yet created
+      return await this.fetchUserProfile();
+    } catch (e) {
+      console.warn('[Supabase] fetchAdminProfile exception:', e);
+      return null;
+    }
+  },
+
+  async saveAdminProfile(profile: UserProfile): Promise<boolean> {
+    try {
+      const adminRow = mapAdminProfileToDb(profile);
+      const { error } = await supabase
+        .from('admin_profile')
+        .upsert(adminRow, { onConflict: 'id' });
+
+      if (error) {
+        // If table doesn't exist yet, save to user_profile table as graceful fallback
+        console.warn('[Supabase] admin_profile table error, saving to user_profile fallback:', error.message);
+        return await this.saveUserProfile(profile);
+      }
+      // Also sync user_profile table to keep legacy and new tables consistent
+      await this.saveUserProfile(profile);
+      return true;
+    } catch (e) {
+      console.warn('[Supabase] saveAdminProfile exception:', e);
+      return await this.saveUserProfile(profile);
     }
   },
 

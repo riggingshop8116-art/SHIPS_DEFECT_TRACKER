@@ -126,16 +126,6 @@ export default function DefectFind({
     }, 200);
   };
 
-  const handleShowAll = () => {
-    setIsSearching(true);
-    setTimeout(() => {
-      const results = executeFilterQuery('', '', '', '', isWorkshopUser && authSession?.workshopCode ? authSession.workshopCode : '');
-      setSearchedDefects(results);
-      setHasSearched(true);
-      setIsSearching(false);
-    }, 200);
-  };
-
   return (
     <div id="defect-find-panel" className="w-full max-w-7xl mx-auto space-y-6 text-slate-800 pb-8">
       
@@ -380,16 +370,6 @@ export default function DefectFind({
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
                 ডিফেক্ট রেকর্ড ডাটাবেজে জমা রয়েছে। জাহাজ, লোকেশন, ওয়ার্কশপ বা নির্দিষ্ট তারিখ নির্বাচন করে উপরের <strong className="text-[#006A4E]">"সার্চ করুন (Search Defects)"</strong> বোতামে চাপুন।
               </p>
-            </div>
-            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={handleShowAll}
-                className="px-5 py-2.5 bg-gradient-to-r from-[#006A4E] to-[#004e39] hover:from-[#005740] hover:to-[#00402e] text-[#FFFDD0] rounded-xl text-xs font-bold border-2 border-[#FFFDD0]/60 shadow-sm flex items-center gap-2 cursor-pointer transition-all active:scale-95"
-              >
-                <Search className="h-3.5 w-3.5" />
-                <span>সকল ডিফেক্ট রেকর্ড প্রদর্শন করুন (View All {defects.length})</span>
-              </button>
             </div>
           </div>
         </div>

@@ -158,19 +158,19 @@ export default function ProfileModal({
       {/* Modal Card */}
       <div 
         id="profile-modal-card"
-        className="w-full max-w-2xl bg-[#001738]/95 backdrop-blur-2xl border-2 border-amber-400/60 rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,10,35,0.95)] ring-1 ring-white/20 overflow-hidden text-white flex flex-col max-h-[92vh]"
+        className="w-full max-w-2xl mx-2 sm:mx-auto bg-[#001738]/95 backdrop-blur-2xl border-2 border-amber-400/60 rounded-3xl shadow-[0_25px_60px_-15px_rgba(0,10,35,0.95)] ring-1 ring-white/20 overflow-hidden text-white flex flex-col max-h-[94vh]"
       >
         {/* Header */}
-        <div className="px-6 py-4 bg-[#001024]/90 border-b border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl p-0.5 bg-gradient-to-br from-amber-400 to-amber-600 border border-amber-300/60 flex items-center justify-center overflow-hidden shadow-md">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-[#001024]/90 border-b border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl p-0.5 bg-gradient-to-br from-amber-400 to-amber-600 border border-amber-300/60 flex items-center justify-center overflow-hidden shadow-md shrink-0">
               <img src="/anchor.jpg" alt="Navy Crest" className="w-full h-full object-contain rounded-lg bg-black" />
             </div>
-            <div>
-              <h3 className="text-lg font-algerian font-bold text-amber-300 flex items-center gap-2">
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-lg font-algerian font-bold text-amber-300 flex items-center gap-2 truncate">
                 <span>{isAdmin ? 'ADMIN PROFILE MANAGEMENT' : 'USER PROFILE & PHOTO EDIT'}</span>
               </h3>
-              <p className="text-xs text-cyan-200/80 font-mono">
+              <p className="text-[10px] sm:text-xs text-cyan-200/80 font-mono truncate">
                 {isAdmin ? 'Bangladesh Navy Command HQ Officer Profile' : `Workshop: ${authSession?.workshopNameEn || authSession?.workshopNameBn || 'User Profile'}`}
               </p>
             </div>
@@ -178,23 +178,23 @@ export default function ProfileModal({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all cursor-pointer"
+            className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all cursor-pointer shrink-0 ml-2"
             title="Close"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
         </div>
 
         {/* Success Alert */}
         {isSaved && (
-          <div className="bg-emerald-900/80 border-b border-emerald-500/50 px-6 py-2.5 flex items-center gap-2 text-emerald-200 text-xs font-algerian animate-pulse">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+          <div className="bg-emerald-900/80 border-b border-emerald-500/50 px-4 sm:px-6 py-2 sm:py-2.5 flex items-center gap-2 text-emerald-200 text-xs font-algerian animate-pulse">
+            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
             <span>PROFILE UPDATED SUCCESSFULLY!</span>
           </div>
         )}
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1">
+        <form onSubmit={handleSubmit} className="p-3 sm:p-5 md:p-6 overflow-y-auto space-y-4 sm:space-y-6 flex-1 custom-scrollbar">
           {/* Avatar Upload Section */}
           <div className="bg-[#000e24]/70 p-5 rounded-2xl border border-cyan-500/25 space-y-4">
             <label className="block text-xs font-algerian font-bold text-amber-300 tracking-wider">
